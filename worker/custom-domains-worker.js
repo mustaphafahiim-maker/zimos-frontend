@@ -7,12 +7,17 @@
  * the storefront service, so the Worker calls the storefront's own Railway
  * host (ORIGIN_HOST) and says which host the shopper asked for:
  *
- *   X-Forwarded-Host   the shopper's host (www.merchant-shop.com)
+ *   X-Zimos-Host       the shopper's host (www.merchant-shop.com)
+ *   X-Forwarded-Host   the same, for a storefront from before X-Zimos-Host
  *   X-Forwarded-Proto  https
  *   X-Zimos-Edge       EDGE_SECRET, the proof that this Worker sent it; the
  *                      storefront (apps/storefront/src/lib/edgeHost.ts)
- *                      ignores X-Forwarded-Host without it
+ *                      ignores X-Zimos-Host without it
  *   X-Zimos-Client-IP  the shopper's IP (CF-Connecting-IP)
+ *
+ * The host goes in a header of our own because Railway's edge sets
+ * X-Forwarded-Host itself, to the host it was called on (ORIGIN_HOST), so the
+ * value sent here never reaches the storefront under that name.
  *
  * Secrets (wrangler secret put / dashboard > Settings > Variables):
  *   ORIGIN_HOST  e.g. storefront-production.up.railway.app (no scheme)
@@ -22,7 +27,7 @@
  * repository.
  */
 
-const HOP_HEADERS = ["x-forwarded-host", "x-zimos-edge", "x-zimos-client-ip"];
+const HOP_HEADERS = ["x-zimos-host", "x-forwarded-host", "x-zimos-edge", "x-zimos-client-ip"];
 
 export default {
   async fetch(request, env) {
@@ -38,6 +43,7 @@ export default {
     const headers = new Headers(request.headers);
     // Whatever the shopper sent under these names is dropped first.
     for (const name of HOP_HEADERS) headers.delete(name);
+    headers.set("X-Zimos-Host", incoming.host);
     headers.set("X-Forwarded-Host", incoming.host);
     headers.set("X-Forwarded-Proto", "https");
     headers.set("X-Zimos-Edge", env.EDGE_SECRET);
