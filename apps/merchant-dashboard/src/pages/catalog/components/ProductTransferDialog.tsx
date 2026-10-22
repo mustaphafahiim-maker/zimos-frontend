@@ -14,12 +14,26 @@ import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { Modal } from "@/components/Modal";
+import {
+  FOLLOW,
+  isFinished,
+  nextDelay,
+  processed,
+  progressKey,
+  readFailure,
+  RequestTimeout,
+  stalled,
+  withTimeout,
+  type FollowStop,
+} from "./importFollow";
 
 /**
  * Import and export of products (SPEC §7.5): a JSON file to move products
  * between stores, an Excel/CSV sheet from the template, or one product from a
- * Shopify link. An import runs in the background; the dialog follows it and
- * shows the report of the rows that could not be imported.
+ * Shopify link. An import runs in the background; the dialog follows it
+ * (importFollow.ts) and shows how it ended, with the rows that could not be
+ * imported. It never waits for good: a request that takes too long, an error,
+ * or an import that does not move stops the following with the reason.
  */
 
 const STRINGS = {
@@ -42,11 +56,28 @@ const STRINGS = {
       "Downloads every product that is not archived — with variants, offers, collections and page content — as one JSON file. Import it in another ZIMOS store to copy your catalog.",
     exportButton: "Download JSON",
     exporting: "Preparing…",
+    uploading: "Uploading…",
     working: "Importing {total} products…",
+    waiting: "Waiting for the import to start…",
+    progress: "{done} of {total} done",
+    closeHint: "You can close this window: the import keeps running, and its products appear in your list.",
+    allDone: "All {total} products were imported.",
     done: "{created} of {total} products imported.",
+    partial: "{created} of {total} products imported. {failed} could not be imported.",
+    stopped: "The import stopped before finishing: {created} of {total} products imported.",
     failedTitle: "{count} could not be imported:",
     row: "Row {row}",
-    stopped: "The import stopped before finishing.",
+    uploadTimeout:
+      "The upload took too long. Check your connection, then look at your product list before trying again: the import may have started anyway.",
+    readTimeout: "The server took too long to answer.",
+    sessionEnded:
+      "Your session ended, so this window stopped following the import. Sign in again: the import keeps running on the server and its products will be in your list.",
+    notStarted:
+      "The import hasn't started after a minute. It is waiting on the server and starts on its own: you can close this window and check your product list later. If nothing appears within a few minutes, contact support.",
+    stalledText:
+      "The import hasn't moved for 3 minutes and may have stopped. Products imported so far are kept: check your product list before importing the same file again.",
+    followError: "This window stopped following the import: {error}",
+    checkAgain: "Check again",
     another: "Import something else",
     close: "Close",
   },
@@ -69,16 +100,34 @@ const STRINGS = {
       "يحمّل كل المنتجات غير المؤرشفة — بالمتغيرات والعروض والمجموعات ومحتوى الصفحة — في ملف JSON واحد. استورده في متجر ZIMOS آخر لنسخ منتجاتك.",
     exportButton: "تحميل JSON",
     exporting: "جارٍ التجهيز…",
+    uploading: "جارٍ الرفع…",
     working: "جارٍ استيراد {total} منتج…",
+    waiting: "في انتظار بدء الاستيراد…",
+    progress: "تمت معالجة {done} من {total}",
+    closeHint: "يمكنك إغلاق هذه النافذة: يستمر الاستيراد، وتظهر منتجاته في قائمتك.",
+    allDone: "تم استيراد كل المنتجات ({total}).",
     done: "تم استيراد {created} من {total} منتج.",
+    partial: "تم استيراد {created} من {total} منتج. تعذّر استيراد {failed}.",
+    stopped: "توقف الاستيراد قبل أن يكتمل: تم استيراد {created} من {total} منتج.",
     failedTitle: "تعذّر استيراد {count}:",
     row: "صف {row}",
-    stopped: "توقف الاستيراد قبل أن يكتمل.",
+    uploadTimeout:
+      "استغرق رفع الملف وقتًا طويلًا. تحقق من اتصالك، ثم راجع قائمة المنتجات قبل المحاولة مرة أخرى: ربما بدأ الاستيراد بالفعل.",
+    readTimeout: "استغرق الخادم وقتًا طويلًا في الرد.",
+    sessionEnded:
+      "انتهت جلستك، لذلك توقفت هذه النافذة عن متابعة الاستيراد. سجّل الدخول مرة أخرى: يستمر الاستيراد على الخادم وستجد منتجاته في قائمتك.",
+    notStarted:
+      "لم يبدأ الاستيراد بعد دقيقة. إنه في الانتظار على الخادم وسيبدأ تلقائيًا: يمكنك إغلاق هذه النافذة ومراجعة قائمة المنتجات لاحقًا. إن لم يظهر شيء خلال دقائق، تواصل مع الدعم.",
+    stalledText:
+      "لم يتقدم الاستيراد منذ 3 دقائق وربما توقف. المنتجات التي تم استيرادها محفوظة: راجع قائمة المنتجات قبل استيراد الملف نفسه مرة أخرى.",
+    followError: "توقفت هذه النافذة عن متابعة الاستيراد: {error}",
+    checkAgain: "تحقق مرة أخرى",
     another: "استيراد شيء آخر",
     close: "إغلاق",
   },
 } satisfies Messages;
 
+type Strings = (typeof STRINGS)["en"];
 type Tab = "file" | "link" | "export";
 const TABS: Tab[] = ["file", "link", "export"];
 
@@ -101,107 +150,149 @@ export function ProductTransferDialog({ onClose, onImported }: { onClose: () => 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [job, setJob] = useState<CatalogImport | null>(null);
+  const [stop, setStop] = useState<FollowStop | null>(null);
 
   // The caller's callback may be a new function every render; the poll must not restart for that.
   const imported = useRef(onImported);
   imported.current = onImported;
+  // Tells the list once per import that products may have come in.
+  const reported = useRef<string | null>(null);
+  const report = (id: string) => {
+    if (reported.current === id) return;
+    reported.current = id;
+    imported.current();
+  };
+  // The upload or download in flight, given up when the dialog closes.
+  const request = useRef<AbortController | null>(null);
+  const jobRef = useRef(job);
+  jobRef.current = job;
 
-  const running = job !== null && (job.status === "queued" || job.status === "running");
-
-  // Follow a running import until it finishes.
+  // Follow the import while it runs and nothing has stopped the following.
+  // Keyed by its id only, so each answer does not restart the clocks below.
+  const followId = job && !isFinished(job) && !stop ? job.id : null;
   useEffect(() => {
-    if (!job || !running) return;
-    let cancelled = false;
-    const timer = window.setTimeout(async () => {
+    if (!followId) return;
+    const outer = new AbortController();
+    const startedAt = Date.now();
+    let mark = { key: jobRef.current ? progressKey(jobRef.current) : "", at: Date.now() };
+    let failures = 0;
+    let timer = 0;
+
+    async function read() {
       try {
-        const next = await catalogGetImport(apiClient, workspaceId, job.id);
-        if (cancelled) return;
+        const next = await withTimeout(FOLLOW.requestTimeoutMs, outer.signal, (signal) =>
+          catalogGetImport(apiClient, workspaceId, followId as string, { signal })
+        );
+        if (outer.signal.aborted) return;
+        failures = 0;
+        if (progressKey(next) !== mark.key) mark = { key: progressKey(next), at: Date.now() };
         setJob(next);
-        if (next.status === "done" || next.status === "failed") imported.current();
-      } catch {
-        // A missed poll is retried on the next tick: same job, new object.
-        if (!cancelled) setJob({ ...job });
+        if (isFinished(next)) {
+          report(next.id);
+          return;
+        }
+        const why = stalled(next, Date.now() - mark.at);
+        if (why) {
+          setStop({ kind: why });
+          return;
+        }
+      } catch (err) {
+        if (outer.signal.aborted) return;
+        const failure = readFailure(err);
+        if (failure === "session") {
+          setStop({ kind: "session" });
+          return;
+        }
+        failures += 1;
+        if (failure === "stop" || failures >= FOLLOW.maxFailures) {
+          setStop({ kind: "error", error: err });
+          return;
+        }
       }
-    }, 1200);
+      timer = window.setTimeout(read, nextDelay(Date.now() - startedAt, failures));
+    }
+
+    timer = window.setTimeout(read, nextDelay(0, 0));
     return () => {
-      cancelled = true;
+      outer.abort();
       window.clearTimeout(timer);
     };
-  }, [job, running, workspaceId]);
+    // `report` reads refs only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [followId, workspaceId]);
 
-  async function start(run: () => Promise<CatalogImport>) {
+  // Closing gives up the request in flight and stops the following; the
+  // import itself keeps running on the server, so the list is refreshed.
+  useEffect(() => () => request.current?.abort(), []);
+  function close() {
+    request.current?.abort();
+    if (job) report(job.id);
+    onClose();
+  }
+
+  function failureText(err: unknown) {
+    if (err instanceof RequestTimeout) return t.readTimeout;
+    if (readFailure(err) === "session") return t.sessionEnded;
+    return errorMessage(err);
+  }
+
+  async function run<T>(timeoutMs: number, send: (signal: AbortSignal) => Promise<T>, done: (value: T) => void, timeoutText: string) {
+    const controller = new AbortController();
+    request.current = controller;
     setBusy(true);
     setError(null);
     try {
-      setJob(await run());
+      const value = await withTimeout(timeoutMs, controller.signal, send);
+      if (!controller.signal.aborted) done(value);
     } catch (err) {
-      setError(errorMessage(err));
+      if (!controller.signal.aborted) setError(err instanceof RequestTimeout ? timeoutText : failureText(err));
     } finally {
-      setBusy(false);
+      if (request.current === controller) request.current = null;
+      if (!controller.signal.aborted) setBusy(false);
     }
   }
 
-  async function download(run: () => Promise<Blob>, filename: string) {
-    setBusy(true);
-    setError(null);
-    try {
-      save(await run(), filename);
-    } catch (err) {
-      setError(errorMessage(err));
-    } finally {
-      setBusy(false);
-    }
+  function start(send: (signal: AbortSignal) => Promise<CatalogImport>) {
+    void run(
+      FOLLOW.uploadTimeoutMs,
+      send,
+      (created) => {
+        setStop(null);
+        setJob(created);
+        if (isFinished(created)) report(created.id);
+      },
+      t.uploadTimeout
+    );
+  }
+
+  function download(send: (signal: AbortSignal) => Promise<Blob>, filename: string) {
+    void run(FOLLOW.uploadTimeoutMs, send, (blob) => save(blob, filename), t.readTimeout);
   }
 
   return (
     <Modal
       open
-      onClose={busy ? () => {} : onClose}
+      onClose={close}
       title={t.title}
       description={t.description}
       footer={
-        <Button type="button" variant="outline" disabled={busy} onClick={onClose}>
+        <Button type="button" variant="outline" onClick={close}>
           {t.close}
         </Button>
       }
     >
       {job ? (
-        <div className="space-y-4">
-          {running ? (
-            <p role="status" className="flex items-center gap-3 text-sm text-ink">
-              <Spinner className="size-4" />
-              {fmt(t.working, { total: job.total })}
-            </p>
-          ) : (
-            <>
-              <Alert variant={job.failedCount > 0 || job.status === "failed" ? "info" : "success"}>
-                {fmt(t.done, { created: job.createdCount, total: job.total })}
-                {job.status === "failed" ? ` ${t.stopped}` : ""}
-              </Alert>
-              {job.errors.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-sm font-semibold text-ink">{fmt(t.failedTitle, { count: job.failedCount })}</p>
-                  <ul className="max-h-64 divide-y divide-line overflow-y-auto rounded-[0.5rem] border border-line text-sm">
-                    {job.errors.map((item, index) => (
-                      <li key={index} className="px-3 py-2">
-                        <p className="font-medium text-ink">
-                          {item.row !== null && <span className="text-ink-soft">{fmt(t.row, { row: item.row })} · </span>}
-                          {item.name}
-                        </p>
-                        <p className="text-ink-soft" dir="auto">
-                          {item.message}
-                        </p>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              <Button type="button" variant="outline" onClick={() => setJob(null)}>
-                {t.another}
-              </Button>
-            </>
-          )}
-        </div>
+        <ImportStatus
+          job={job}
+          stop={stop}
+          t={t}
+          failureText={failureText}
+          onCheckAgain={() => setStop(null)}
+          onAnother={() => {
+            setJob(null);
+            setStop(null);
+          }}
+        />
       ) : (
         <div className="space-y-4">
           <div role="tablist" className="flex flex-wrap gap-1 border-b border-line">
@@ -211,6 +302,7 @@ export function ProductTransferDialog({ onClose, onImported }: { onClose: () => 
                 type="button"
                 role="tab"
                 aria-selected={tab === key}
+                disabled={busy}
                 onClick={() => {
                   setTab(key);
                   setError(null);
@@ -232,22 +324,23 @@ export function ProductTransferDialog({ onClose, onImported }: { onClose: () => 
                 type="file"
                 accept=".csv,.xlsx,.json,application/json,text/csv"
                 className="hidden"
+                data-testid="import-file"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   e.target.value = "";
-                  if (file) void start(() => catalogImportFile(apiClient, workspaceId, file));
+                  if (file) start((signal) => catalogImportFile(apiClient, workspaceId, file, { signal }));
                 }}
               />
               <div className="flex flex-wrap gap-2">
                 <Button type="button" disabled={busy} onClick={() => fileInput.current?.click()}>
                   {busy ? <Spinner className="size-4" /> : <FileUp className="size-4" aria-hidden />}
-                  {t.chooseFile}
+                  {busy ? t.uploading : t.chooseFile}
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
                   disabled={busy}
-                  onClick={() => void download(() => catalogImportTemplate(apiClient, workspaceId), "products-template.csv")}
+                  onClick={() => download(() => catalogImportTemplate(apiClient, workspaceId), "products-template.csv")}
                 >
                   <Download className="size-4" aria-hidden />
                   {t.template}
@@ -261,7 +354,8 @@ export function ProductTransferDialog({ onClose, onImported }: { onClose: () => 
               className="space-y-3"
               onSubmit={(e) => {
                 e.preventDefault();
-                if (link.trim()) void start(() => catalogImportFromLink(apiClient, workspaceId, link.trim()));
+                const url = link.trim();
+                if (url) start((signal) => catalogImportFromLink(apiClient, workspaceId, url, { signal }));
               }}
             >
               <div className="space-y-1.5">
@@ -291,7 +385,7 @@ export function ProductTransferDialog({ onClose, onImported }: { onClose: () => 
                 type="button"
                 disabled={busy}
                 onClick={() =>
-                  void download(
+                  download(
                     () => catalogExportProducts(apiClient, workspaceId),
                     `products-${new Date().toISOString().slice(0, 10)}.json`
                   )
@@ -307,5 +401,99 @@ export function ProductTransferDialog({ onClose, onImported }: { onClose: () => 
         </div>
       )}
     </Modal>
+  );
+}
+
+/** A running import's progress, why the dialog stopped following it, or how it ended. */
+function ImportStatus({
+  job,
+  stop,
+  t,
+  failureText,
+  onCheckAgain,
+  onAnother,
+}: {
+  job: CatalogImport;
+  stop: FollowStop | null;
+  t: Strings;
+  failureText: (err: unknown) => string;
+  onCheckAgain: () => void;
+  onAnother: () => void;
+}) {
+  const done = processed(job);
+
+  if (!isFinished(job)) {
+    if (stop) {
+      const text =
+        stop.kind === "session"
+          ? t.sessionEnded
+          : stop.kind === "notStarted"
+            ? t.notStarted
+            : stop.kind === "stalled"
+              ? t.stalledText
+              : fmt(t.followError, { error: failureText(stop.error) });
+      return (
+        <div className="space-y-4">
+          <Alert variant={stop.kind === "notStarted" ? "info" : "danger"}>{text}</Alert>
+          {done > 0 && <p className="text-sm text-ink-soft">{fmt(t.progress, { done, total: job.total })}</p>}
+          {stop.kind !== "session" && (
+            <Button type="button" variant="outline" onClick={onCheckAgain}>
+              {t.checkAgain}
+            </Button>
+          )}
+        </div>
+      );
+    }
+    return (
+      <div className="space-y-2">
+        <p role="status" className="flex items-center gap-3 text-sm text-ink">
+          <Spinner className="size-4" />
+          {job.status === "queued" ? t.waiting : fmt(t.working, { total: job.total })}
+        </p>
+        {done > 0 && <p className="text-sm text-ink-soft">{fmt(t.progress, { done, total: job.total })}</p>}
+        <p className="text-xs text-ink-soft">{t.closeHint}</p>
+      </div>
+    );
+  }
+
+  const counts = { created: job.createdCount, total: job.total, failed: job.failedCount };
+  const summary =
+    job.status === "failed"
+      ? fmt(t.stopped, counts)
+      : job.failedCount > 0
+        ? fmt(t.partial, counts)
+        : job.createdCount === job.total
+          ? fmt(t.allDone, counts)
+          : fmt(t.done, counts);
+
+  return (
+    <div className="space-y-4">
+      <Alert variant={job.status === "failed" ? "danger" : job.failedCount > 0 ? "info" : "success"}>{summary}</Alert>
+      {job.errors.length > 0 && (
+        <div className="space-y-2">
+          {job.failedCount > 0 && (
+            <p className="text-sm font-semibold text-ink">{fmt(t.failedTitle, { count: job.failedCount })}</p>
+          )}
+          <ul className="max-h-64 divide-y divide-line overflow-y-auto rounded-[0.5rem] border border-line text-sm">
+            {job.errors.map((item, index) => (
+              <li key={index} className="px-3 py-2">
+                {(item.row !== null || item.name) && (
+                  <p className="font-medium text-ink">
+                    {item.row !== null && <span className="text-ink-soft">{fmt(t.row, { row: item.row })} · </span>}
+                    {item.name}
+                  </p>
+                )}
+                <p className="text-ink-soft" dir="auto">
+                  {item.message}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      <Button type="button" variant="outline" onClick={onAnother}>
+        {t.another}
+      </Button>
+    </div>
   );
 }
