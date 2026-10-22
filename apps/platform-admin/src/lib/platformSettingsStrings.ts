@@ -67,7 +67,7 @@ export const PLATFORM_SETTINGS_STRINGS = {
     rights: "Rights line",
     // email
     senderName: "Sender name",
-    senderNameHint: "The name inboxes show. The address itself stays the one set on the server (EMAIL_FROM_ADDRESS). A store's emails keep the store's name.",
+    senderNameHint: "The name inboxes show on the platform's own emails (account, security, notifications, reports). The address stays the one set on the server (EMAIL_FROM_ADDRESS). A store's emails to its shoppers keep the sender name they have today.",
     signature: "Signature",
     signatureHint: "Plain text under the platform's own emails (account, security, notifications, reports). Never on a store's email to its shoppers.",
     showSupportEmail: "Add the support email under the signature",
@@ -168,7 +168,7 @@ export const PLATFORM_SETTINGS_STRINGS = {
     tagline: "سطر التذييل",
     rights: "سطر الحقوق",
     senderName: "اسم المرسل",
-    senderNameHint: "الاسم الذي يظهر في صندوق الوارد. يبقى العنوان نفسه المضبوط في الخادم (EMAIL_FROM_ADDRESS). رسائل المتجر تبقى باسم المتجر.",
+    senderNameHint: "الاسم الذي يظهر في صندوق الوارد لرسائل المنصة نفسها (الحساب والأمان والإشعارات والتقارير). يبقى العنوان المضبوط في الخادم (EMAIL_FROM_ADDRESS). رسائل المتجر لعملائه تبقى باسم المرسل الذي تحمله اليوم.",
     signature: "التوقيع",
     signatureHint: "نص عادي أسفل رسائل المنصة نفسها (الحساب والأمان والإشعارات والتقارير). لا يُضاف أبدًا إلى رسائل المتجر لعملائه.",
     showSupportEmail: "إضافة بريد الدعم أسفل التوقيع",
