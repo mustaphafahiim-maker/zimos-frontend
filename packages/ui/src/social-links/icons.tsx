@@ -69,6 +69,24 @@ function WhatsAppIcon(props: IconProps) {
   );
 }
 
+function YouTubeIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <rect x="2.5" y="5" width="19" height="14" rx="4" />
+      <path d="m10 9 5 3-5 3Z" />
+    </svg>
+  );
+}
+
+function LinkedInIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <rect x="3" y="3" width="18" height="18" rx="3" />
+      <path d="M8 10.5V17M8 7.5h.01M12 17v-6.5M12 13.5c0-1.7 1-3 2.5-3s2.5 1.1 2.5 3V17" />
+    </svg>
+  );
+}
+
 function EmailIcon(props: IconProps) {
   return (
     <svg {...base} {...props}>
@@ -82,7 +100,9 @@ export const SOCIAL_ICONS: Record<SocialPlatform, ComponentType<IconProps>> = {
   instagram: InstagramIcon,
   facebook: FacebookIcon,
   tiktok: TikTokIcon,
+  youtube: YouTubeIcon,
   x: XIcon,
+  linkedin: LinkedInIcon,
   whatsapp: WhatsAppIcon,
   email: EmailIcon,
 };
