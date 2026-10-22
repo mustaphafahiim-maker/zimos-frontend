@@ -14,7 +14,7 @@
  * PATCH should send the whole object.
  */
 import type { ApiClient } from "../client";
-import type { Product, StorefrontProduct } from "../types";
+import type { Product, ProductStatus, StorefrontProduct } from "../types";
 
 // ------------------------------------------------------------------ types --
 
@@ -458,6 +458,87 @@ export async function catalogGetImport(
 export async function catalogListImports(client: ApiClient, workspaceId: string): Promise<CatalogImport[]> {
   const body = await client.request<{ imports: CatalogImport[] }>(`${base(workspaceId)}/imports`);
   return body.imports;
+}
+
+// ------------------------------------------------------------- bulk delete --
+
+/** The product list's filters, as GET /products, the count and the bulk delete take them. */
+export interface CatalogProductFilters {
+  status?: ProductStatus | ProductStatus[];
+  collectionId?: string;
+  q?: string;
+  sku?: string;
+  productType?: string;
+  stock?: string;
+}
+
+function filterQuery(filters: CatalogProductFilters): string {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(filters)) {
+    const text = Array.isArray(value) ? value.join(",") : value;
+    if (text) query.set(key, String(text));
+  }
+  const qs = query.toString();
+  return qs ? `?${qs}` : "";
+}
+
+/**
+ * How many products the list's filters match across every page, and `asOf`,
+ * the moment they were counted: send it back as `filter.createdBefore` to
+ * delete all of them without taking a product added since.
+ */
+export async function catalogCountProducts(
+  client: ApiClient,
+  workspaceId: string,
+  filters: CatalogProductFilters = {}
+): Promise<{ count: number; asOf: string }> {
+  return client.request<{ count: number; asOf: string }>(`${base(workspaceId)}/products/count${filterQuery(filters)}`);
+}
+
+export type CatalogBulkDeleteMode = "archive" | "permanent";
+export type CatalogBulkDeleteSkipReason = "has_orders" | "in_funnel" | "not_found" | "already_archived";
+
+export interface CatalogBulkDeleteSkip {
+  id: string;
+  /** null for a product that is not in this store (any more). */
+  name: string | null;
+  reason: CatalogBulkDeleteSkipReason;
+  /** in_funnel: the funnels that sell it. */
+  funnelIds?: string[];
+}
+
+export interface CatalogBulkDeleteResult {
+  mode: CatalogBulkDeleteMode;
+  /** Archived (mode archive) or removed for good (mode permanent). */
+  deleted: number;
+  skipped: CatalogBulkDeleteSkip[];
+  /** Send it back as `cursor` for the next chunk of a filter; null after the last. */
+  nextCursor: string | null;
+}
+
+export type CatalogBulkDeleteRequest =
+  | { mode: CatalogBulkDeleteMode; productIds: string[] }
+  | { mode: CatalogBulkDeleteMode; filter: CatalogProductFilters & { createdBefore: string }; cursor?: string };
+
+/** The most product ids one bulk-delete request takes, and the size of a filter's chunk. */
+export const CATALOG_BULK_DELETE_CHUNK = 100;
+
+/**
+ * Archives or deletes for good one chunk of products, by the single delete's
+ * rules: a product with orders, or sold in a funnel, is skipped with the
+ * reason. 429 when sent faster than 30 a minute: wait `retryAfter`, send again.
+ */
+export async function catalogBulkDeleteProducts(
+  client: ApiClient,
+  workspaceId: string,
+  body: CatalogBulkDeleteRequest,
+  opts: CatalogRequestOptions = {}
+): Promise<CatalogBulkDeleteResult> {
+  return client.request<CatalogBulkDeleteResult>(`${base(workspaceId)}/products/bulk-delete`, {
+    method: "POST",
+    body,
+    signal: opts.signal,
+  });
 }
 
 // ------------------------------------------------------------- collections --

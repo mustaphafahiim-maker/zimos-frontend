@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { LayoutGrid, List } from "lucide-react";
 import { Button, cn } from "@store-builder/ui";
-import type { Product, ProductStatus } from "@store-builder/api-client";
+import type { CatalogProductFilters, Product, ProductStatus } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useCursorList } from "@/lib/useCursorList";
@@ -179,8 +179,11 @@ export function CatalogProductsPage() {
   const filters = useProductFilters();
   const [view, setView] = useState<CatalogView>(readView);
   const [toRemove, setToRemove] = useState<Product | null>(null);
-  // Rows ticked for bulk edit (list view).
-  const selection = useProductSelection();
+  // The tab and filters the list shows: the count and "all N" of the bulk bar follow them.
+  const listFilters = { status: TAB_STATUS[tab], ...filters.params } as CatalogProductFilters;
+  const listKey = `${tab}|${filters.key}`;
+  // Rows ticked for bulk edit and delete (list view), or "all N" of them.
+  const selection = useProductSelection(listKey);
   // Rows with a restore in flight, so a second click can't send it twice.
   const [restoring, setRestoring] = useState<ReadonlySet<string>>(new Set());
 
@@ -351,7 +354,16 @@ export function CatalogProductsPage() {
         </div>
       )}
 
-      <ProductBulkBar selection={selection} onDone={list.reload} />
+      <ProductBulkBar
+        selection={selection}
+        onDone={list.reload}
+        products={filtered}
+        hasMore={list.hasMore}
+        filters={listFilters}
+        filtersKey={listKey}
+        narrowed={tab !== "all" || Object.keys(filters.params).length > 0}
+        archivedTab={tab === "archived"}
+      />
 
       <DataState
         loading={list.loading}
