@@ -88,3 +88,13 @@ export const HERO_MEDIA_ENABLED = process.env.NEXT_PUBLIC_HERO_MEDIA_ENABLED ===
  * saved. Pairs with the dashboard's VITE_STORE_SIDEBAR_ENABLED, which offers the choice.
  */
 export const STORE_SIDEBAR_ENABLED = process.env.NEXT_PUBLIC_STORE_SIDEBAR_ENABLED === "true";
+
+/**
+ * Visible time per page for the Visitors screens: each page view gets an id,
+ * and its time on screen (counted only while the tab is visible) is reported
+ * when the next page is viewed, when the tab is hidden and when the page goes
+ * away; the batch also says when the browser is driven by automation. Off,
+ * the tracker sends exactly what it always has. Pairs with the API's
+ * TRAFFIC_DETAILS_ENABLED (without it the reports are dropped).
+ */
+export const DWELL_TRACKING_ENABLED = process.env.NEXT_PUBLIC_DWELL_TRACKING_ENABLED === "true";

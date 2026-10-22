@@ -180,3 +180,13 @@ export const XS_ONLY_ENABLED = import.meta.env.VITE_XS_ONLY_ENABLED === "true";
  * PLATFORM_SETTINGS_ENABLED.
  */
 export const PLATFORM_SETTINGS_ENABLED = import.meta.env.VITE_PLATFORM_SETTINGS_ENABLED === "true";
+
+/**
+ * Visitors (Analytics → Visitors): the store's own visitors — where they came
+ * from, their governorate (approximate from the IP, then from their order),
+ * device, time on each page and product, the funnel, campaigns with cost per
+ * order, and how orders ended per governorate. Off, no menu entry and no
+ * route. Filled by the API's TRAFFIC_DETAILS_ENABLED and the storefront's
+ * NEXT_PUBLIC_DWELL_TRACKING_ENABLED.
+ */
+export const VISITORS_ENABLED = import.meta.env.VITE_VISITORS_ENABLED === "true";

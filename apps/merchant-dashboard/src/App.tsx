@@ -22,6 +22,7 @@ import {
   STORE_CREDIT_ENABLED,
   STORE_REPORTS_ENABLED,
   VIP_TIERS_ENABLED,
+  VISITORS_ENABLED,
 } from "@/lib/features";
 import { REWARDS_HOME } from "@/pages/loyalty/RewardsTabs";
 import { LoginPage } from "@/pages/LoginPage";
@@ -111,6 +112,7 @@ const AnalyticsPage = lazy(() => import("@/pages/analytics/AnalyticsPage").then(
 const ReportsPage = lazy(() =>
   import("@/pages/analytics/reports/ReportsPage").then((m) => ({ default: m.ReportsPage }))
 );
+const VisitorsPage = lazy(() => import("@/pages/analytics/visitors/VisitorsPage").then((m) => ({ default: m.VisitorsPage })));
 const WebAnalyticsPage = lazy(() =>
   import("@/pages/analytics/WebAnalyticsPage").then((m) => ({ default: m.WebAnalyticsPage }))
 );
@@ -239,6 +241,7 @@ export default function App() {
                       />
                       <Route path="/analytics/summary" element={<LazyRoute><AnalyticsPage /></LazyRoute>} />
                       <Route path="/analytics/web" element={<LazyRoute><WebAnalyticsPage /></LazyRoute>} />
+                      {VISITORS_ENABLED && <Route path="/analytics/visitors" element={<LazyRoute><VisitorsPage /></LazyRoute>} />}
                       <Route path="/analytics/attribution" element={<LazyRoute><AttributionPage /></LazyRoute>} />
                       <Route path="/analytics/realtime" element={<LazyRoute><RealtimePage /></LazyRoute>} />
                       <Route

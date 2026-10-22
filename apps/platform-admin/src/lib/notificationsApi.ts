@@ -13,7 +13,9 @@ export type NotificationType =
   | "referral_signup"
   | "user_suspended"
   | "suggestion"
-  | "wallet_fallback";
+  | "wallet_fallback"
+  // A store went over its daily analytics limit (Store traffic, protection tab).
+  | "traffic_cap";
 
 export const NOTIFICATION_TYPES: NotificationType[] = [
   "user_signup",
@@ -28,6 +30,7 @@ export const NOTIFICATION_TYPES: NotificationType[] = [
   "user_suspended",
   "suggestion",
   "wallet_fallback",
+  "traffic_cap",
 ];
 
 export interface ConsoleNotification {

@@ -7,6 +7,7 @@ import {
   CreditCard,
   Factory,
   Flag,
+  Footprints,
   Globe,
   Handshake,
   LayoutDashboard,
@@ -31,6 +32,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { P } from "@/lib/permissions";
+import { STORE_TRAFFIC_ENABLED } from "@/lib/features";
 
 export interface NavItem {
   label: string;
@@ -55,6 +57,8 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: "Overview", to: "/", icon: LayoutDashboard, permission: P.OVERVIEW_VIEW },
       { label: "Notifications", to: "/notifications", icon: Bell, permission: P.OVERVIEW_VIEW },
       { label: "Site traffic", to: "/site-traffic", icon: Globe, permission: P.OVERVIEW_VIEW },
+      // Every store's visitors are store data: workspaces.view (VITE_STORE_TRAFFIC_ENABLED).
+      ...(STORE_TRAFFIC_ENABLED ? [{ label: "Store traffic", to: "/store-traffic", icon: Footprints, permission: P.WORKSPACES_VIEW }] : []),
     ],
   },
   {

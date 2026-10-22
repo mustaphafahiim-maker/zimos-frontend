@@ -135,6 +135,7 @@ export const NAV_LABELS_AR: Record<string, string> = {
   Overview: "نظرة عامة",
   Notifications: "الإشعارات",
   "Site traffic": "زيارات الموقع",
+  "Store traffic": "زيارات المتاجر",
   Merchants: "التجار",
   Workspaces: "المتاجر",
   Users: "المستخدمون",

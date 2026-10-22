@@ -15,7 +15,13 @@
  *  - components/StoreAnalytics.tsx: `page_view` per navigation (router or
  *    history.pushState), `window.zimos.track`, the `[data-zimos-event]`
  *    clicks, the pagehide flush, and the tracking context;
- *  - lib/track.ts: the commerce events (ad pixels there are still stubbed).
+ *  - lib/track.ts: the commerce events (ad pixels there are still stubbed);
+ *  - with DWELL_TRACKING_ENABLED: each page_view carries a pageViewId, and a
+ *    `page_dwell` report gives that page view's visible time (lib/dwell.ts) —
+ *    sent when the next page is viewed, when the tab is hidden and when the
+ *    page goes away (StoreAnalytics) — with the product the page showed. The
+ *    batch also says when the browser is driven by automation
+ *    (navigator.webdriver), which the API keeps out of the store's numbers.
  *
  * A failed or refused request (the API down, a store answering 423 while it
  * is unavailable, a rate limit) is dropped silently: analytics are best
@@ -34,8 +40,10 @@ import {
   type NavigationState,
   type UrlOptions,
 } from "./trackerCore";
-import { captureAttribution, getSessionId, getVisitorId, type Attribution } from "./visitor";
+import { captureAttribution, getSessionId, getVisitorId, randomId, type Attribution } from "./visitor";
 import { currentTouches, type Touches } from "./touches";
+import { createDwellClock, type DwellReading } from "./dwell";
+import { DWELL_TRACKING_ENABLED } from "./features";
 
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000/api/v1";
 
@@ -81,6 +89,12 @@ export interface AnalyticsEvent {
   metadata?: Record<string, unknown>;
   /** Custom event data (`window.zimos.track(name, data)`, `data-zimos-event-*`). */
   data?: EventData;
+  /** A page view's own id; its `page_dwell` reports name it (DWELL_TRACKING_ENABLED). */
+  pageViewId?: string;
+  /** `page_dwell` only: the page view's visible time so far, in ms. */
+  dwellMs?: number;
+  /** `page_dwell` only: the product the page showed. */
+  productId?: string;
 }
 
 export interface TrackingContext {
@@ -112,6 +126,8 @@ interface Batch {
   touches?: Touches;
   /** Ad-platform browser ids and viewed products, for server-side pixel events (lib/adPixels.ts). */
   pixel?: Record<string, unknown>;
+  /** navigator.webdriver: a browser driven by automation (DWELL_TRACKING_ENABLED). */
+  automation?: boolean;
   events: AnalyticsEvent[];
 }
 
@@ -274,6 +290,11 @@ function deliver(workspaceId: string, events: AnalyticsEvent[], urgent: boolean)
     /* optional */
   }
   try {
+    if (DWELL_TRACKING_ENABLED && (navigator as Navigator & { webdriver?: boolean }).webdriver === true) body.automation = true;
+  } catch {
+    /* optional */
+  }
+  try {
     if (window.screen) body.screen = `${window.screen.width}x${window.screen.height}`;
     if (navigator.language) body.language = navigator.language;
     if (window.location.hostname) body.hostname = window.location.hostname;
@@ -330,15 +351,21 @@ export function sendEvent(workspaceId: string, event: AnalyticsEvent) {
   try {
     if (trackingDisabled()) return;
     const ctx = context && context.workspaceId === workspaceId ? context : null;
+    // A visible-time report is about its page view, not the page on screen now.
+    const report = event.name === DWELL_EVENT;
     const full: AnalyticsEvent = {
       ...event,
       name: String(event.name).slice(0, MAX_NAME),
-      path: event.path ?? window.location.pathname,
-      url: event.url ?? currentUrl(),
-      title: event.title ?? pageTitle(),
-      referrer: event.referrer ?? currentReferrer(),
+      path: report ? undefined : (event.path ?? window.location.pathname),
+      url: report ? undefined : (event.url ?? currentUrl()),
+      title: report ? undefined : (event.title ?? pageTitle()),
+      referrer: report ? undefined : (event.referrer ?? currentReferrer()),
       occurredAt: event.occurredAt ?? new Date().toISOString(),
     };
+    if (DWELL_TRACKING_ENABLED && full.name === "view_content") {
+      const ids = full.metadata?.contentIds;
+      if (Array.isArray(ids) && ids.length === 1 && typeof ids[0] === "string") dwell.setProduct(ids[0]);
+    }
     if (full.tag === undefined && ctx?.tag) full.tag = ctx.tag;
     if (full.websiteId === undefined && ctx?.websiteId) full.websiteId = ctx.websiteId;
     if (full.funnelId === undefined && ctx?.funnelId) full.funnelId = ctx.funnelId;
@@ -380,7 +407,65 @@ export function sendPageView(workspaceId: string) {
   const referrer = currentReferrer();
   const path = window.location.pathname;
   const occurredAt = new Date().toISOString();
-  setTimeout(() => sendEvent(workspaceId, { name: "page_view", path, url, referrer, occurredAt }), TITLE_DELAY_MS);
+  const pageViewId = DWELL_TRACKING_ENABLED ? startPageClock(workspaceId) : undefined;
+  setTimeout(() => sendEvent(workspaceId, { name: "page_view", path, url, referrer, occurredAt, pageViewId }), TITLE_DELAY_MS);
+}
+
+// --- visible time (DWELL_TRACKING_ENABLED) -------------------------------------------
+
+const DWELL_EVENT = "page_dwell";
+const dwell = createDwellClock(() => Date.now());
+
+function sendDwell(workspaceId: string, reading: DwellReading | null) {
+  if (!reading) return;
+  sendEvent(workspaceId, { name: DWELL_EVENT, pageViewId: reading.pageViewId, dwellMs: reading.dwellMs, productId: reading.productId });
+}
+
+function isVisible(): boolean {
+  try {
+    return document.visibilityState !== "hidden";
+  } catch {
+    return true;
+  }
+}
+
+/** A new page view: the one before reports its last reading, and this one starts counting. */
+function startPageClock(workspaceId: string): string | undefined {
+  try {
+    const pageViewId = randomId().slice(0, 24);
+    sendDwell(workspaceId, dwell.start(pageViewId, isVisible()));
+    return pageViewId;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * The tab was hidden (its reading goes out now, by beacon) or shown again
+ * (counting resumes). StoreAnalytics calls it on `visibilitychange`.
+ */
+export function trackVisibility(workspaceId: string) {
+  if (!DWELL_TRACKING_ENABLED || typeof window === "undefined") return;
+  try {
+    if (isVisible()) {
+      dwell.resume();
+      return;
+    }
+    sendDwell(workspaceId, dwell.pause());
+    flush(true);
+  } catch {
+    /* never break the store */
+  }
+}
+
+/** The page is going away (`pagehide`): its last reading joins the final flush. */
+export function reportLeave(workspaceId: string) {
+  if (!DWELL_TRACKING_ENABLED || typeof window === "undefined") return;
+  try {
+    sendDwell(workspaceId, dwell.pause());
+  } catch {
+    /* never break the store */
+  }
 }
 
 /** Send everything queued now — used on pagehide, when a request may not get another chance. */
