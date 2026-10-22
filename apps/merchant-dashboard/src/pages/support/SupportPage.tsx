@@ -29,6 +29,7 @@ import { NewTicketSheet } from "./NewTicketSheet";
 import { SUPPORT_STATUSES, SUPPORT_STATUS_TONE, ticketCacheKey, ticketsCacheKey, useSupportLabels, waitsOnYou } from "./supportLabels";
 import { TicketQuickLook } from "./TicketQuickLook";
 import { TicketMessages, TicketThreadSkeleton } from "./TicketThread";
+import { usePlatformSocialLinks } from "./usePlatformSocialLinks";
 
 const STRINGS = {
   en: {
@@ -150,6 +151,7 @@ const TICKET_COLUMNS = "grid-cols-[minmax(0,1fr)_max-content_max-content_max-con
 export function SupportPage() {
   const t = useT(STRINGS);
   const { locale } = useLocale();
+  const socialLinks = usePlatformSocialLinks();
   const labels = useSupportLabels();
   const workspaceId = useWorkspaceId();
   const toast = useToast();
@@ -307,8 +309,8 @@ export function SupportPage() {
         )}
       </div>
 
-      {/* ZIMOS's own social accounts and email (packages/ui/src/social-links): the other ways to reach us. */}
-      <SocialLinks locale={locale} heading={t.socialHeading} headingClassName="mt-8 font-display text-lg font-medium text-ink" />
+      {/* ZIMOS's own social accounts and email (packages/ui/src/social-links, or the console's): the other ways to reach us. */}
+      <SocialLinks locale={locale} links={socialLinks} heading={t.socialHeading} headingClassName="mt-8 font-display text-lg font-medium text-ink" />
 
       <TicketQuickLook
         ticket={peeked}

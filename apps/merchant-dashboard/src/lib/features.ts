@@ -170,3 +170,13 @@ export const PICTURE_SHAPE_DEFAULT_ENABLED = import.meta.env.VITE_PICTURE_SHAPE_
  * No storefront or API switch pairs with it.
  */
 export const XS_ONLY_ENABLED = import.meta.env.VITE_XS_ONLY_ENABLED === "true";
+
+/**
+ * ZIMOS's social accounts on the support page come from the console's
+ * "Platform settings" (the API's public GET /platform-settings/public) instead
+ * of the list in packages/ui/src/social-links/config.ts. Off: that list, as
+ * before. On, the code's list is still what shows when the API is off, down or
+ * the links were never saved. Turn on once the API runs with
+ * PLATFORM_SETTINGS_ENABLED.
+ */
+export const PLATFORM_SETTINGS_ENABLED = import.meta.env.VITE_PLATFORM_SETTINGS_ENABLED === "true";

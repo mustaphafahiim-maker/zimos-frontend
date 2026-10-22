@@ -1,6 +1,8 @@
+import { socialLinksOf, textIn } from "@store-builder/ui/platform-info";
 import { SocialLinks } from "@store-builder/ui/social-links";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/dictionary";
+import { getPlatformSettings } from "@/lib/platform-settings";
 import { companyDetails } from "@/lib/policies";
 import { LocaleSwitcher } from "./locale-switcher";
 import { container } from "./ui";
@@ -14,8 +16,13 @@ import { ZimosLogo } from "./zimos-logo";
  * registration number from src/lib/policies.ts). Every
  * link is prefixed with the active locale; `#section` links go to the home
  * page's sections. The © year is computed at render.
+ *
+ * With PLATFORM_SETTINGS_ENABLED on, the tagline, the social accounts, the
+ * name in the © line, its words and the legal entity come from the console
+ * (lib/platform-settings.ts), each falling back to the values above when it
+ * was never saved or the API can't be reached.
  */
-export function SiteFooter({
+export async function SiteFooter({
   copy,
   brand,
   locale,
@@ -25,7 +32,11 @@ export function SiteFooter({
   locale: Locale;
 }) {
   const year = new Date().getFullYear();
-  const company = companyDetails(locale);
+  const settings = await getPlatformSettings();
+  const company = companyDetails(locale, settings);
+  const tagline = textIn(settings?.footer?.tagline, locale, brand.tomorrow);
+  const rights = textIn(settings?.footer?.rights, locale, copy.rights);
+  const name = settings?.company?.platformName ?? brand.name;
 
   return (
     <footer className="border-t border-line bg-paper-raised">
@@ -33,8 +44,8 @@ export function SiteFooter({
         <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
           <div className="max-w-xs">
             <ZimosLogo height={32} />
-            <p className="mt-6 text-sm leading-relaxed text-ink-soft">{brand.tomorrow}</p>
-            <SocialLinks locale={locale} className="mt-6" />
+            <p className="mt-6 text-sm leading-relaxed text-ink-soft">{tagline}</p>
+            <SocialLinks locale={locale} links={socialLinksOf(settings)} className="mt-6" />
             <div className="mt-6 flex items-center gap-3">
               <span className="text-sm text-ink-soft">{copy.languageLabel}</span>
               <LocaleSwitcher />
@@ -64,7 +75,7 @@ export function SiteFooter({
 
         <div className="mt-12 flex flex-col gap-1 border-t border-line pt-6 text-sm text-ink-soft sm:flex-row sm:flex-wrap sm:justify-between">
           <p>
-            © {year} {brand.name} · {copy.rights}
+            © {year} {name} · {rights}
           </p>
           <p>
             {company.legalName} · {copy.registration}: <span dir="ltr">{company.registration}</span> ·{" "}
