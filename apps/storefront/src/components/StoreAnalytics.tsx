@@ -6,10 +6,12 @@ import {
   configureTracker,
   flush,
   recordNavigation,
+  reportLeave,
   sendContextEvent,
   sendPageView,
   setTrackingContext,
   setTrackingPaused,
+  trackVisibility,
   type EventData,
   type TrackerOptions,
 } from "@/lib/analyticsEvents";
@@ -26,7 +28,9 @@ import { EVENT_ATTRIBUTE, collectEventData, isExternalClick } from "@/lib/tracke
  *  - `window.zimos.track(name, data)` for custom events, and click
  *    delegation for `[data-zimos-event]` elements (every `data-zimos-event-*`
  *    attribute becomes event data);
- *  - a flush of whatever is still queued when the page goes away.
+ *  - a flush of whatever is still queued when the page goes away;
+ *  - with DWELL_TRACKING_ENABLED, the page view's visible time when the tab
+ *    is hidden and when the page goes away (lib/analyticsEvents.ts).
  *
  * Reads the search params, so the layout wraps it in <Suspense>. Mounted
  * once, by the store layout (app/store/[workspaceId]/layout.tsx). The funnel
@@ -163,11 +167,17 @@ export function StoreAnalytics({
       if (recordNavigation(url)) sendPageView(workspaceId);
     });
     document.addEventListener("click", onDocumentClick, true);
-    const onHide = () => flush(true);
+    const onHide = () => {
+      reportLeave(workspaceId);
+      flush(true);
+    };
+    const onVisibility = () => trackVisibility(workspaceId);
     window.addEventListener("pagehide", onHide);
+    document.addEventListener("visibilitychange", onVisibility);
     return () => {
       document.removeEventListener("click", onDocumentClick, true);
       window.removeEventListener("pagehide", onHide);
+      document.removeEventListener("visibilitychange", onVisibility);
       flush(false);
     };
   }, [workspaceId]);
