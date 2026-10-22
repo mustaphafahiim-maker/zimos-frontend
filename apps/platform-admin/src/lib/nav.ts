@@ -21,6 +21,7 @@ import {
   Puzzle,
   Receipt,
   ScrollText,
+  Settings2,
   ShieldAlert,
   Truck,
   Undo2,
@@ -126,6 +127,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: "Audit log", to: "/audit-log", icon: ScrollText, permission: P.AUDIT_LOG_VIEW },
       { label: "System health", to: "/system-health", icon: Activity, permission: P.SYSTEM_VIEW },
       { label: "Admin users", to: "/admin-users", icon: UserCog, permission: P.ADMINS_VIEW },
+      { label: "Platform settings", to: "/platform-settings", icon: Settings2, permission: P.PLATFORM_SETTINGS_VIEW },
     ],
   },
 ];

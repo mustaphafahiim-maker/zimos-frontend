@@ -1,3 +1,4 @@
+import type { PublicPlatformSettings } from "@store-builder/ui/platform-info";
 import content from "@/content/policies.json";
 import type { Locale } from "@/i18n/config";
 
@@ -14,6 +15,11 @@ import type { Locale } from "@/i18n/config";
  * `{email}`, `{phone}`, `{address}`, `{legalName}`, `{registration}`,
  * `{taxRegistration}` and `{governingLaw}` in the text are filled in from the
  * company details, so each is written once.
+ *
+ * With PLATFORM_SETTINGS_ENABLED on, the contact and company details saved in
+ * the console (lib/platform-settings.ts) take the place of these, field by
+ * field; a group never saved keeps the values here. The text of the pages and
+ * the governing law always come from this file.
  */
 
 export type PolicySlug = "refund-policy" | "terms" | "privacy" | "contact";
@@ -50,8 +56,25 @@ export const POLICIES_LAST_UPDATED: string = content.lastUpdated;
 /** ZIMOS's tax registration number, shown in the footer and the contact page's entity details. */
 export const TAX_REGISTRATION_NUMBER = "783-889-615";
 
-export function companyDetails(locale: Locale): CompanyDetails {
-  return { ...content.company[locale], taxRegistration: TAX_REGISTRATION_NUMBER };
+export function companyDetails(locale: Locale, settings?: PublicPlatformSettings | null): CompanyDetails {
+  const own: CompanyDetails = { ...content.company[locale], taxRegistration: TAX_REGISTRATION_NUMBER };
+  const contact = settings?.contact;
+  const company = settings?.company;
+  return {
+    ...own,
+    ...(contact && {
+      email: contact.supportEmail ?? own.email,
+      phone: contact.phone ?? own.phone,
+      address: contact.address[locale],
+      hours: contact.hours[locale],
+    }),
+    ...(company && {
+      brand: company.platformName,
+      legalName: company.legalName[locale],
+      registration: company.registration[locale],
+      taxRegistration: company.taxRegistration ?? own.taxRegistration,
+    }),
+  };
 }
 
 function fill(text: string, company: CompanyDetails): string {
@@ -60,8 +83,8 @@ function fill(text: string, company: CompanyDetails): string {
   );
 }
 
-export function policyPage(slug: PolicySlug, locale: Locale): PolicyPage {
-  const company = companyDetails(locale);
+export function policyPage(slug: PolicySlug, locale: Locale, settings?: PublicPlatformSettings | null): PolicyPage {
+  const company = companyDetails(locale, settings);
   const page = content.pages[slug][locale] as PolicyPage;
   return {
     title: page.title,

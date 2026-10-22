@@ -10,6 +10,7 @@ import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { Modal } from "@/components/Modal";
 import { Select } from "@/components/Select";
 import { useToast } from "@/components/Toast";
+import { BulkProgress } from "./BulkProgress";
 
 /**
  * Bulk edit of the products ticked in the list (SPEC §7.5): status, free
@@ -44,6 +45,7 @@ const STRINGS = {
     cancel: "Cancel",
     apply: "Apply to {count} products",
     applying: "Applying…",
+    updating: "Updating {count} products…",
     done: "{count} products updated.",
   },
   ar: {
@@ -71,6 +73,7 @@ const STRINGS = {
     cancel: "إلغاء",
     apply: "تطبيق على {count} منتج",
     applying: "جارٍ التطبيق…",
+    updating: "جارٍ تحديث {count} منتج…",
     done: "تم تحديث {count} منتج.",
   },
 } satisfies Messages;
@@ -227,6 +230,8 @@ export function ProductBulkEditDialog({
           <p className="text-xs text-ink-soft">{t.priceHint}</p>
         </div>
 
+        {/* One request, applied to all of them or to none: the bar shows it is under way. */}
+        {busy && <BulkProgress label={fmt(t.updating, { count })} total={count} />}
         {error && <Alert variant="danger">{error}</Alert>}
       </div>
     </Modal>

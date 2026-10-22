@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "test": "node --test \"src/**/*.test.mjs\"",
+    "test:components": "npm exec --workspace=merchant-dashboard -- vitest run --root ../platform-admin",
     "preview": "vite preview",
     "start": "serve -s dist -l 8080"
   },

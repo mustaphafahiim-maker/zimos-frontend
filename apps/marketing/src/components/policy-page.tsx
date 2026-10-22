@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { socialLinksOf, type PublicPlatformSettings } from "@store-builder/ui/platform-info";
 import { SocialLinks } from "@store-builder/ui/social-links";
 import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/dictionaries";
 import { formatLongDate } from "@/lib/format";
 import { ogImage } from "@/lib/og";
+import { getPlatformSettings } from "@/lib/platform-settings";
 import { POLICIES_LAST_UPDATED, POLICY_SLUGS, companyDetails, policyPage, type PolicySlug } from "@/lib/policies";
 import { SiteFooter } from "./site-footer";
 import { SiteHeader } from "./site-header";
@@ -36,13 +38,15 @@ export function policyMetadata(slug: PolicySlug, locale: string): Metadata {
  * A policy page (refund policy, terms, privacy) or the contact page: its
  * title, the "last updated" date, the text from src/content/policies.json,
  * and — on the contact page — the contact details, ZIMOS's social accounts
- * and the entity details.
+ * and the entity details. The contact and entity details, in the text too,
+ * follow the console when PLATFORM_SETTINGS_ENABLED is on (lib/policies.ts).
  */
 export async function PolicyPage({ slug, params }: { slug: PolicySlug; params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
   const dict = getDictionary(locale);
-  const page = policyPage(slug, locale);
+  const settings = await getPlatformSettings();
+  const page = policyPage(slug, locale, settings);
   const related = POLICY_SLUGS.filter((other) => other !== slug);
 
   return (
@@ -59,7 +63,7 @@ export async function PolicyPage({ slug, params }: { slug: PolicySlug; params: P
             </p>
             <p className="mt-6 text-lg leading-relaxed text-pretty text-ink">{page.intro}</p>
 
-            {slug === "contact" ? <ContactDetails locale={locale} /> : null}
+            {slug === "contact" ? <ContactDetails locale={locale} settings={settings} /> : null}
 
             {page.sections.map((section) => (
               <section key={section.heading} className="mt-10">
@@ -97,9 +101,9 @@ export async function PolicyPage({ slug, params }: { slug: PolicySlug; params: P
 /** A value someone filled in, not a "[placeholder]" still waiting for one. */
 const isReal = (value: string) => !value.includes("[");
 
-function ContactDetails({ locale }: { locale: Locale }) {
+function ContactDetails({ locale, settings }: { locale: Locale; settings: PublicPlatformSettings | null }) {
   const { legal } = getDictionary(locale);
-  const company = companyDetails(locale);
+  const company = companyDetails(locale, settings);
   const row = (label: string, value: React.ReactNode) => (
     <div className="grid gap-1 border-b border-line py-3 sm:grid-cols-[10rem_1fr]">
       <dt className="text-sm text-ink-soft">{label}</dt>
@@ -137,7 +141,7 @@ function ContactDetails({ locale }: { locale: Locale }) {
           {row(legal.hours, company.hours)}
         </dl>
       </section>
-      <SocialLinks locale={locale} heading={legal.socialHeading} headingClassName="text-xl font-bold text-ink" />
+      <SocialLinks locale={locale} links={socialLinksOf(settings)} heading={legal.socialHeading} headingClassName="text-xl font-bold text-ink" />
       <section aria-labelledby="entity-heading">
         <h2 id="entity-heading" className="text-xl font-bold text-ink">
           {legal.entityHeading}

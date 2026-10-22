@@ -7,7 +7,7 @@ shopper → www.merchant-shop.com   (merchant's CNAME → customers.zimos.co)
         → Cloudflare, zone zimos.co   (custom hostname + DV certificate)
         → Worker worker/custom-domains-worker.js
               calls ORIGIN_HOST (the storefront's Railway host) with
-              X-Forwarded-Host: www.merchant-shop.com
+              X-Zimos-Host: www.merchant-shop.com
               X-Zimos-Edge: <EDGE_SECRET>
         → storefront proxy (apps/storefront/src/proxy.ts) → /store/<slug>
 ```
@@ -44,6 +44,19 @@ end passes.
      the Worker).
    - Route `*zimos.co/*`, Worker **None** (the platform's own hosts never go
      through it).
+
+Why `X-Zimos-Host` and not `X-Forwarded-Host`: Railway's edge sets
+`X-Forwarded-Host` itself, to the host it was called on, which is
+`ORIGIN_HOST`. The visitor's host the Worker put there never reaches the
+storefront, which then shows its own default "Storefront" page on every
+merchant domain. The Worker still sends `X-Forwarded-Host` too, for a
+storefront deployed before `X-Zimos-Host`; the storefront reads
+`X-Forwarded-Host` only when `X-Zimos-Host` is absent. Both are trusted only
+with `X-Zimos-Edge` equal to the storefront's `CUSTOM_DOMAIN_EDGE_SECRET` (at
+least 32 characters).
+
+After changing the Worker's code, paste it again and press **Deploy**: the
+repository never deploys it.
 
 ## 3. Edge settings
 
@@ -87,8 +100,9 @@ the merchant forwards it to `https://www.merchant-shop.com` at the registrar.
 2. Open the domain: the store loads over https with Cloudflare's certificate.
 3. Open `/store/<slug>/products/x` on it: redirected to `/products/x` on the
    **same** domain, never the Railway host.
-4. Call the Railway host directly with a made-up `X-Forwarded-Host`: the store
-   of that host must **not** load.
+4. Call the Railway host directly with a made-up `X-Zimos-Host` and
+   `X-Forwarded-Host` and no `X-Zimos-Edge`: the store of that host must
+   **not** load.
 5. Check the shopper's IP in the backend logs is the real one, not
    Cloudflare's.
 6. Remove the domain in the dashboard: the custom hostname disappears from
