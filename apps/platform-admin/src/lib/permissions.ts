@@ -37,6 +37,9 @@ export const P = {
   AGENTS_MANAGE: "agents.manage",
   COMMISSIONS_MARK_PAID: "commissions.mark_paid",
   REFERRALS_VIEW_OWN: "referrals.view_own",
+  // The platform's public details (pages/PlatformSettingsPage.tsx).
+  PLATFORM_SETTINGS_VIEW: "platform_settings.view",
+  PLATFORM_SETTINGS_MANAGE: "platform_settings.manage",
 } as const;
 
 export type PermissionKey = (typeof P)[keyof typeof P];
@@ -87,6 +90,8 @@ export const PERMISSION_LABELS: Record<string, string> = {
   "agents.manage": "Agents and referral codes — create and edit",
   "commissions.mark_paid": "Commissions — mark paid",
   "referrals.view_own": "Own referral codes and commissions (agents)",
+  "platform_settings.view": "Platform settings — view",
+  "platform_settings.manage": "Platform settings — edit, reset and restore",
 };
 
 export function permissionLabel(key: string): string {

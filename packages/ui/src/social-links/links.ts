@@ -4,7 +4,7 @@
  * rules can check a list that later comes from the API.
  */
 
-export const SOCIAL_PLATFORMS = ["instagram", "facebook", "tiktok", "x", "whatsapp", "email"] as const;
+export const SOCIAL_PLATFORMS = ["instagram", "facebook", "tiktok", "youtube", "x", "linkedin", "whatsapp", "email"] as const;
 
 export type SocialPlatform = (typeof SOCIAL_PLATFORMS)[number];
 
@@ -31,13 +31,18 @@ export interface SocialLinkItem {
 /**
  * The domains each platform's link may point at: the domain itself or one of
  * its subdomains (`www.`, `m.`). A link elsewhere is skipped, so a typo or a
- * lookalike domain never sits behind a platform's icon.
+ * lookalike domain never sits behind a platform's icon. The API keeps its own
+ * copy for the links saved in the console (backend
+ * modules/platformSettings/rules.js SOCIAL_DOMAINS, where WhatsApp is wa.me
+ * only): keep the two the same.
  */
 const PLATFORM_DOMAINS: Record<Exclude<SocialPlatform, "email">, readonly string[]> = {
   instagram: ["instagram.com"],
   facebook: ["facebook.com", "fb.com"],
   tiktok: ["tiktok.com"],
+  youtube: ["youtube.com", "youtu.be"],
   x: ["x.com", "twitter.com"],
+  linkedin: ["linkedin.com"],
   whatsapp: ["wa.me", "whatsapp.com"],
 };
 
@@ -47,7 +52,12 @@ const PLATFORM_DOMAINS: Record<Exclude<SocialPlatform, "email">, readonly string
  * most a prefilled `text`.
  */
 function isWaMeChat(url: URL): boolean {
-  return /^\/[1-9][0-9]{7,14}$/.test(url.pathname) && !url.hash && [...url.searchParams.keys()].every((key) => key === "text");
+  // forEach, not keys(): the console's TypeScript setup has no DOM.Iterable.
+  let onlyText = true;
+  url.searchParams.forEach((_, key) => {
+    if (key !== "text") onlyText = false;
+  });
+  return /^\/[1-9][0-9]{7,14}$/.test(url.pathname) && !url.hash && onlyText;
 }
 
 /** One plain address: no display name, no second recipient, no headers, nothing percent-encoded. */
@@ -121,7 +131,9 @@ const PLATFORM_LABELS: Record<SocialLocale, Record<SocialPlatform, string>> = {
     instagram: "ZIMOS على إنستغرام",
     facebook: "ZIMOS على فيسبوك",
     tiktok: "ZIMOS على تيك توك",
+    youtube: "ZIMOS على يوتيوب",
     x: "ZIMOS على إكس",
+    linkedin: "ZIMOS على لينكدإن",
     whatsapp: "ZIMOS على واتساب",
     email: "راسل ZIMOS عبر البريد الإلكتروني",
   },
@@ -129,7 +141,9 @@ const PLATFORM_LABELS: Record<SocialLocale, Record<SocialPlatform, string>> = {
     instagram: "ZIMOS on Instagram",
     facebook: "ZIMOS on Facebook",
     tiktok: "ZIMOS on TikTok",
+    youtube: "ZIMOS on YouTube",
     x: "ZIMOS on X",
+    linkedin: "ZIMOS on LinkedIn",
     whatsapp: "ZIMOS on WhatsApp",
     email: "Email ZIMOS",
   },

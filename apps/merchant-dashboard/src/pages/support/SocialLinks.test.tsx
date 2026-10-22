@@ -36,7 +36,9 @@ const VALID: Record<SocialPlatform, string> = {
   instagram: "https://instagram.com/zimos.co",
   facebook: "https://facebook.com/zimos.co",
   tiktok: "https://www.tiktok.com/@zimos.co",
+  youtube: "https://www.youtube.com/@zimos",
   x: "https://x.com/ZimosCo",
+  linkedin: "https://www.linkedin.com/company/zimos",
   whatsapp: "https://wa.me/201501921444",
   email: "mailto:zimossupport@gmail.com",
 };

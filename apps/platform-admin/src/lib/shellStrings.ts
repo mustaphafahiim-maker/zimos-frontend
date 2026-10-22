@@ -166,4 +166,5 @@ export const NAV_LABELS_AR: Record<string, string> = {
   "Audit log": "سجل التدقيق",
   "System health": "حالة النظام",
   "Admin users": "المسؤولون",
+  "Platform settings": "إعدادات المنصة",
 };
