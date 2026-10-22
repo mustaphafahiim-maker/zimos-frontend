@@ -33,6 +33,7 @@ export const NOTIFICATION_STRINGS = {
     type_user_suspended: "Account suspended",
     type_suggestion: "New suggestion",
     type_wallet_fallback: "Store moved to pay per order",
+    type_traffic_cap: "Store over its daily analytics limit",
   },
   ar: {
     title: "الإشعارات",
@@ -65,6 +66,7 @@ export const NOTIFICATION_STRINGS = {
     type_user_suspended: "إيقاف حساب",
     type_suggestion: "اقتراح جديد",
     type_wallet_fallback: "متجر انتقل إلى الدفع لكل طلب",
+    type_traffic_cap: "متجر تجاوز حده اليومي من بيانات الزيارات",
   },
 };
 
