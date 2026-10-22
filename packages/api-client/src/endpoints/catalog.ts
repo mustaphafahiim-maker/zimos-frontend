@@ -404,30 +404,53 @@ export async function catalogImportTemplate(client: ApiClient, workspaceId: stri
   return res.blob();
 }
 
+/** `signal` gives up on the request (a timeout, or the dialog closed). */
+export interface CatalogRequestOptions {
+  signal?: AbortSignal;
+}
+
 /**
  * Starts an import from a file: .json (a ZIMOS export), .csv or .xlsx. 422
  * VALIDATION_ERROR when the file cannot be read at all; otherwise the import
  * runs in the background — poll catalogGetImport for its report.
  */
-export async function catalogImportFile(client: ApiClient, workspaceId: string, file: File): Promise<CatalogImport> {
+export async function catalogImportFile(
+  client: ApiClient,
+  workspaceId: string,
+  file: File,
+  opts: CatalogRequestOptions = {}
+): Promise<CatalogImport> {
   const form = new FormData();
   form.append("file", file, file.name);
-  const res = await rawFetch(client, `${base(workspaceId)}/products/import`, { method: "POST", body: form });
+  const res = await rawFetch(client, `${base(workspaceId)}/products/import`, { method: "POST", body: form, signal: opts.signal });
   const body = (await res.json()) as { import: CatalogImport };
   return body.import;
 }
 
 /** Starts an import of one product from its Shopify page link. 422 IMPORT_SOURCE_UNREACHABLE when it cannot be read. */
-export async function catalogImportFromLink(client: ApiClient, workspaceId: string, url: string): Promise<CatalogImport> {
+export async function catalogImportFromLink(
+  client: ApiClient,
+  workspaceId: string,
+  url: string,
+  opts: CatalogRequestOptions = {}
+): Promise<CatalogImport> {
   const body = await client.request<{ import: CatalogImport }>(`${base(workspaceId)}/products/import`, {
     method: "POST",
     body: { url },
+    signal: opts.signal,
   });
   return body.import;
 }
 
-export async function catalogGetImport(client: ApiClient, workspaceId: string, importId: string): Promise<CatalogImport> {
-  const body = await client.request<{ import: CatalogImport }>(`${base(workspaceId)}/imports/${importId}`);
+export async function catalogGetImport(
+  client: ApiClient,
+  workspaceId: string,
+  importId: string,
+  opts: CatalogRequestOptions = {}
+): Promise<CatalogImport> {
+  const body = await client.request<{ import: CatalogImport }>(`${base(workspaceId)}/imports/${importId}`, {
+    signal: opts.signal,
+  });
   return body.import;
 }
 
