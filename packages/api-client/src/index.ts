@@ -53,6 +53,8 @@ export * from "./endpoints/reports";
 export * from "./endpoints/profit";
 export * from "./endpoints/settlementStatements";
 export * from "./endpoints/live";
+// Visitors: where they came from, time per page, the funnel, campaigns, outcomes per governorate.
+export * from "./endpoints/visitors";
 // Merchant notifications (the header bell and its preferences).
 export * from "./endpoints/notifications";
 // Orders: status changes, history, notes, tags, bulk actions.

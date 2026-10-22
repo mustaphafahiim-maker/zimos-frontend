@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   Banknote,
   Download,
+  Footprints,
   GraduationCap,
   MousePointerClick,
   Handshake,
@@ -55,6 +56,7 @@ import {
   SIZE_CHARTS_ENABLED,
   STORE_CREDIT_ENABLED,
   VIP_TIERS_ENABLED,
+  VISITORS_ENABLED,
 } from "@/lib/features";
 
 /** Where "Loyalty & rewards" opens: the first of its four programmes that is switched on; null while none is. */
@@ -97,6 +99,7 @@ export type NavKey =
   | "funnels"
   | "analytics"
   | "webAnalytics"
+  | "visitors"
   | "attribution"
   | "realtime"
   | "subscription"
@@ -241,6 +244,10 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "analytics", to: "/analytics", icon: BarChart3, hiddenForRoles: NO_ANALYTICS_ROLES },
       { key: "realtime", to: "/analytics/realtime", icon: Activity, hiddenForRoles: NO_ANALYTICS_ROLES },
       { key: "webAnalytics", to: "/analytics/web", icon: LineChart, hiddenForRoles: NO_ANALYTICS_ROLES },
+      // The store's visitors, only while the feature is switched on (lib/features).
+      ...(VISITORS_ENABLED
+        ? [{ key: "visitors" as const, to: "/analytics/visitors", icon: Footprints, hiddenForRoles: NO_ANALYTICS_ROLES }]
+        : []),
       { key: "attribution", to: "/analytics/attribution", icon: Target, hiddenForRoles: NO_ANALYTICS_ROLES },
       { key: "profit", to: "/profit", icon: PiggyBank, hiddenForRoles: NO_ANALYTICS_ROLES },
       { key: "ads", to: "/ads", icon: CircleDollarSign, hiddenForRoles: NO_ANALYTICS_ROLES },
@@ -333,6 +340,7 @@ export const NAV_LABELS = {
     funnels: "Funnels",
     analytics: "Analytics",
     webAnalytics: "Web analytics",
+    visitors: "Visitors",
     realtime: "Realtime",
     subscription: "My Plan",
     attribution: "Sales sources",
@@ -380,6 +388,7 @@ export const NAV_LABELS = {
     funnels: "مسارات البيع",
     analytics: "النظرة العامة والتقارير",
     webAnalytics: "زيارات الموقع",
+    visitors: "الزوار",
     attribution: "مصادر المبيعات",
     realtime: "مباشر الآن",
     subscription: "خطتي",
