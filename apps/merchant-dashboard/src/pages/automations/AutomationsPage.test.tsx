@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { screen } from "@testing-library/react";
-import type { AutomationRule, AutomationRun, AutomationTrigger } from "@store-builder/api-client";
+import type { AutomationFlowRule, AutomationFlowRun, AutomationFlowTemplate, AutomationStepType } from "@store-builder/api-client";
 import { api, fake } from "@/test/mocks";
 import { renderWithProviders } from "@/test/renderWithProviders";
 import { AutomationsPage } from "./AutomationsPage";
 
-const TRIGGERS: AutomationTrigger[] = [
+const TRIGGERS = [
   "order.created",
   "order.confirmed",
   "order.rejected",
@@ -15,34 +15,68 @@ const TRIGGERS: AutomationTrigger[] = [
   "order.delivered",
 ];
 const TOKENS = ["customer_name", "order_number", "order_total", "store_name", "tracking_url", "city"];
+const STEP_TYPES: AutomationStepType[] = ["wait", "whatsapp_template", "sms", "email", "webhook", "add_tag", "set_status", "notify_team"];
 
-const rule = fake<AutomationRule>({
+const rule = fake<AutomationFlowRule>({
   id: "rule_1",
   name: "Shipped notice",
   trigger: "order.shipped",
   isActive: true,
+  templateKey: null,
   conditions: {},
   actions: [
     { type: "whatsapp_template", template: "order_shipped", language: "ar", params: ["{{customer_name}}"] },
   ],
   stats: { sent: 3, skipped: 0, failed: 1, lastRunAt: "2026-09-14T09:00:00.000Z" },
+  createdAt: "2026-09-01T09:00:00.000Z",
+  updatedAt: "2026-09-01T09:00:00.000Z",
 });
 
-const run = fake<AutomationRun>({
+const run = fake<AutomationFlowRun>({
   id: "run_1",
   ruleId: "rule_1",
   trigger: "order.shipped",
   status: "failed",
   detail: "Template not approved",
+  stepIndex: 0,
+  stepType: "whatsapp_template",
+  executionId: "exe_1",
   createdAt: "2026-09-14T09:00:00.000Z",
   order: { id: "ord_1", orderNumber: "#1001" },
 });
 
+const template = fake<AutomationFlowTemplate>({
+  key: "abandoned_cart",
+  trigger: "checkout.abandoned",
+  name: { ar: "تذكير السلة", en: "Abandoned cart reminder" },
+  description: { ar: "رسالة لمن ترك السلة", en: "A message to shoppers who left their cart" },
+  conditions: {},
+  steps: [],
+  whatsappTemplates: [],
+  ruleId: null,
+});
+
+/**
+ * The page reads and writes automations through api.request: answers each
+ * "METHOD path" given, and leaves anything else pending.
+ */
+function serve(routes: Record<string, unknown>) {
+  api.request.mockImplementation(((path: string, opts?: { method?: string }) => {
+    const key = `${opts?.method ?? "GET"} ${path}`;
+    return key in routes ? Promise.resolve(routes[key]) : new Promise<never>(() => undefined);
+  }) as never);
+}
+
+const lists = (rules: AutomationFlowRule[], runs: AutomationFlowRun[], templates: AutomationFlowTemplate[]) => ({
+  "GET /workspaces/ws_1/automations": { rules, triggers: TRIGGERS, tokens: TOKENS, stepTypes: STEP_TYPES },
+  "GET /workspaces/ws_1/automations/runs?limit=50": { runs, nextCursor: null },
+  "GET /workspaces/ws_1/automations/templates": { templates },
+});
+
 describe("AutomationsPage", () => {
-  it("warns when WhatsApp isn't connected and lists rules and runs", async () => {
+  it("warns when WhatsApp isn't connected and lists templates, rules and runs", async () => {
     api.getWhatsappIntegration.mockResolvedValue({ connected: false });
-    api.listAutomations.mockResolvedValue({ rules: [rule], triggers: TRIGGERS, tokens: TOKENS });
-    api.listAutomationRuns.mockResolvedValue({ runs: [run], nextCursor: null });
+    serve(lists([rule], [run], [template]));
 
     renderWithProviders(<AutomationsPage />, { route: "/automations" });
 
@@ -50,6 +84,8 @@ describe("AutomationsPage", () => {
       "href",
       "/settings#whatsapp"
     );
+    expect(await screen.findByText("Abandoned cart reminder")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Switch on" })).toBeInTheDocument();
     expect((await screen.findAllByText("Shipped notice")).length).toBeGreaterThan(0);
     expect(await screen.findByText("Template not approved")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "#1001" })).toHaveAttribute("href", "/orders/ord_1");
@@ -58,9 +94,10 @@ describe("AutomationsPage", () => {
 
   it("creates a rule with a token inserted into a template variable", async () => {
     api.getWhatsappIntegration.mockResolvedValue(fake({ connected: true, status: "connected" }));
-    api.listAutomations.mockResolvedValue({ rules: [], triggers: TRIGGERS, tokens: TOKENS });
-    api.listAutomationRuns.mockResolvedValue({ runs: [], nextCursor: null });
-    api.createAutomation.mockResolvedValue(rule);
+    serve({
+      ...lists([], [], []),
+      "POST /workspaces/ws_1/automations": { rule: { ...rule, id: "rule_2", name: "Confirmed thanks", trigger: "order.confirmed" } },
+    });
 
     const { user } = renderWithProviders(<AutomationsPage />, { route: "/automations" });
 
@@ -68,25 +105,45 @@ describe("AutomationsPage", () => {
     expect(screen.queryByRole("link", { name: "Connect WhatsApp" })).not.toBeInTheDocument();
     await user.click(screen.getAllByRole("button", { name: /New automation/ })[0]);
     await user.type(await screen.findByLabelText(/^Name/), "Confirmed thanks");
-    await user.type(screen.getByLabelText(/WhatsApp template name/), "order_confirmed");
+    await user.selectOptions(screen.getByLabelText("When this happens"), "order.confirmed");
+    await user.type(screen.getByLabelText("Template name"), "order_confirmed");
+    // A new WhatsApp step starts with no variables.
+    await user.click(screen.getByRole("button", { name: "Add variable" }));
     await user.click(screen.getByRole("textbox", { name: "Variable 1" }));
     await user.click(screen.getByRole("button", { name: "customer_name" }));
     expect(screen.getByRole("textbox", { name: "Variable 1" })).toHaveValue("{{customer_name}}");
     await user.click(screen.getByRole("button", { name: "Save" }));
 
-    expect(api.createAutomation).toHaveBeenCalledWith("ws_1", {
-      name: "Confirmed thanks",
-      trigger: "order.confirmed",
-      isActive: true,
-      conditions: { paymentMethod: null, minTotalAmount: null },
-      actions: [
-        {
-          type: "whatsapp_template",
-          template: "order_confirmed",
-          language: "ar",
-          params: ["{{customer_name}}"],
+    expect(api.request).toHaveBeenCalledWith("/workspaces/ws_1/automations", {
+      method: "POST",
+      body: {
+        name: "Confirmed thanks",
+        trigger: "order.confirmed",
+        conditions: {
+          paymentMethod: null,
+          minTotalAmount: null,
+          source: null,
+          governorates: [],
+          tags: [],
+          isFirstOrder: null,
+          riskLevel: [],
+          couponCode: null,
+          segmentId: null,
+          excludeSegmentId: null,
+          stopOnStatusChange: true,
+          productIds: [],
+          funnelIds: [],
         },
-      ],
+        actions: [
+          {
+            type: "whatsapp_template",
+            template: "order_confirmed",
+            language: "ar",
+            params: ["{{customer_name}}"],
+          },
+        ],
+      },
     });
+    expect(await screen.findByText("Automation created.")).toBeInTheDocument();
   });
 });

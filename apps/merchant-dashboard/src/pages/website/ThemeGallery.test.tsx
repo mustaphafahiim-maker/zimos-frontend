@@ -36,7 +36,8 @@ describe("ThemeGallery", () => {
 
     const cards = screen.getAllByRole("listitem");
     expect(cards).toHaveLength(7);
-    expect(cards.map((card) => within(card).getByRole("button").getAttribute("aria-label"))).toEqual([
+    // The store's own card also has a Reset button (ThemeResetButton).
+    expect(cards.map((card) => within(card).getByRole("button", { name: /^Try the / }).getAttribute("aria-label"))).toEqual([
       "Try the Original theme",
       "Try the Elegant theme",
       "Try the Bold theme",

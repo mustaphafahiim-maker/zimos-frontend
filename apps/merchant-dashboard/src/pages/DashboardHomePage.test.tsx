@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { screen } from "@testing-library/react";
-import type { AnalyticsSummary, ConfirmationQueueCounts, FunnelAnalyticsOverview, Order, Workspace } from "@store-builder/api-client";
+import type {
+  AnalyticsSummary,
+  ConfirmationQueueCounts,
+  InsightsMetricKey,
+  InsightsOverview,
+  Order,
+  SetupGuide,
+  Workspace,
+} from "@store-builder/api-client";
 import { api, fake, testWorkspace } from "@/test/mocks";
 import { renderWithProviders } from "@/test/renderWithProviders";
 import { DashboardHomePage } from "./DashboardHomePage";
@@ -17,6 +25,81 @@ const summary = (gross: number) =>
     topProducts: [{ productId: "prd_1", name: "Linen shirt", quantity: 7, revenue: 140000 }],
     newCustomers: 3,
   });
+
+const METRIC_KEYS: InsightsMetricKey[] = [
+  "visits",
+  "orders",
+  "sales",
+  "averageOrderValue",
+  "addToCart",
+  "checkouts",
+  "crossSellAdds",
+  "newOrders",
+  "lostOrders",
+  "conversionRate",
+  "lostRate",
+  "netProfit",
+  "newCustomers",
+  "returningCustomers",
+  "leads",
+  "confirmationRate",
+  "deliveryRate",
+];
+
+// The home page's KPIs (StoreOverview), from /analytics/overview.
+const overview = fake<InsightsOverview>({
+  range: { from: "2026-09-14T00:00:00.000Z", to: "2026-09-21T00:00:00.000Z", timeZone: "UTC" },
+  previousRange: { from: "2026-09-07T00:00:00.000Z", to: "2026-09-14T00:00:00.000Z" },
+  funnelId: null,
+  currency: "EGP",
+  moneyMetrics: ["sales", "averageOrderValue", "netProfit"],
+  metrics: {
+    ...Object.fromEntries(METRIC_KEYS.map((key) => [key, { value: 0, previous: 0 }])),
+    sales: { value: 250000, previous: 200000 },
+    confirmationRate: { value: 75, previous: null },
+  },
+  series: [],
+  funnel: [],
+  offers: [],
+  topSources: [],
+  topGovernorates: [],
+  devices: [],
+  topProducts: [{ productId: "prd_1", name: "Linen shirt", quantity: 7, sales: 140000 }],
+  topFunnels: [],
+});
+
+const guide: SetupGuide = {
+  steps: [
+    { key: "product", done: true, optional: false },
+    { key: "website", done: false, optional: false },
+  ],
+  completed: 1,
+  total: 2,
+  percent: 50,
+  done: false,
+};
+
+const webStats = {
+  pageviews: 320,
+  visitors: 120,
+  visits: 150,
+  bounces: 60,
+  totaltime: 9000,
+  bounceRate: 40,
+  avgVisitTime: 60,
+  comparison: { pageviews: 160, visitors: 100, visits: 120, bounces: 60, totaltime: 6000, bounceRate: 50, avgVisitTime: 50 },
+};
+
+/** Answers the calls the home page makes through api.request, by path; anything else stays pending. */
+function serveRequests() {
+  api.request.mockImplementation(((path: string) => {
+    const route = String(path).split("?")[0];
+    if (route === "/workspaces/ws_1/analytics/overview") return Promise.resolve({ overview });
+    if (route === "/workspaces/ws_1/setup-guide") return Promise.resolve(guide);
+    if (route === "/workspaces/ws_1/funnels") return Promise.resolve({ funnels: [] });
+    return new Promise<never>(() => undefined);
+  }) as never);
+}
 
 // Awaiting = waiting for a call (pending) + someone on it (inProgress).
 const queue: ConfirmationQueueCounts = {
@@ -42,31 +125,42 @@ const order = fake<Order>({
 });
 
 describe("DashboardHomePage", () => {
-  it("shows real 30-day stats with deltas, the confirmation queue's count, recent orders and top products", async () => {
-    api.getAnalyticsSummary.mockResolvedValueOnce(summary(250000)).mockResolvedValueOnce(summary(200000));
+  it("shows the store overview with deltas, the setup guide, the queue's count, recent orders and site analytics", async () => {
+    api.getAnalyticsSummary.mockResolvedValue(summary(250000));
     api.getConfirmationQueueCounts.mockResolvedValue(queue);
     api.listOrders.mockResolvedValue({ orders: [order], nextCursor: null });
-    api.getFunnelAnalytics.mockResolvedValue(
-      fake<FunnelAnalyticsOverview>({
-        totals: { sessions: 0, completed: 0, orders: 0, revenue: 0, upsellOrders: 0, upsellRevenue: 0, conversionRate: null },
-        funnels: [],
-      })
+    serveRequests();
+    api.getWebAnalyticsStats.mockResolvedValue(fake(webStats));
+    api.getWebAnalyticsSeries.mockResolvedValue(fake({ unit: "day", series: [] }));
+    api.getWebAnalyticsMetrics.mockImplementation(async (_ws, type) =>
+      fake({ type, rows: type === "path" ? [{ x: "/products/linen-shirt", y: 40 }] : [] })
     );
+    api.getWebAnalyticsRealtime.mockResolvedValue(fake({ activeVisitors: 2 }));
 
     renderWithProviders(<DashboardHomePage />, { route: "/" });
 
-    expect(await screen.findByText("Gross sales")).toBeInTheDocument();
-    expect(screen.getByText("+25.0%", { exact: false })).toBeInTheDocument();
-    const awaiting = screen.getByRole("link", { name: /Awaiting confirmation/ });
-    expect(awaiting).toHaveAttribute("href", "/confirmation-queue");
-    expect(awaiting).toHaveTextContent("5");
-    expect(await screen.findByText("ORD-1001")).toBeInTheDocument();
+    // 250,000 against 200,000 the period before: +25%.
+    const sales = await screen.findByRole("link", { name: /Total sales/ });
+    expect(sales).toHaveAttribute("href", "/analytics");
+    expect(sales).toHaveTextContent("25.0%");
+    expect(screen.getByRole("link", { name: /Confirmation rate/ })).toHaveTextContent("75.0%");
     expect(screen.getByText("Linen shirt")).toBeInTheDocument();
-    expect(screen.getByText("75.0%")).toBeInTheDocument();
-    expect(screen.getByText("No funnel sessions in the last 30 days.")).toBeInTheDocument();
+    expect(api.request).toHaveBeenCalledWith(expect.stringMatching(/^\/workspaces\/ws_1\/analytics\/overview\?.*compare=previous/));
+
+    expect(await screen.findByText("Get your store ready")).toBeInTheDocument();
+    expect(screen.getByText("1 of 2 steps done")).toBeInTheDocument();
+
+    const confirm = screen.getByRole("link", { name: /Confirm orders/ });
+    expect(confirm).toHaveAttribute("href", "/confirmation-queue");
+    expect(confirm).toHaveTextContent("5");
+
+    expect(await screen.findByText("ORD-1001")).toBeInTheDocument();
     // The order roll-up the page used to walk is not needed any more.
     expect(api.listOrders).toHaveBeenCalledTimes(1);
     expect(api.listOrders.mock.calls[0][1]).toEqual({ limit: 6 });
+
+    expect(await screen.findByText("/products/linen-shirt")).toBeInTheDocument();
+    expect(screen.getByText("Website analytics")).toBeInTheDocument();
   });
 
   it("falls back to the order roll-up for a role without analytics, and asks for no analytics", async () => {

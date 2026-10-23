@@ -24,8 +24,9 @@ describe("Suggestions page", () => {
 
   it("knows the 'suggestion' notification type, in English and Arabic", () => {
     const api = read("../lib/notificationsApi.ts");
-    assert.match(api, /\| "suggestion";/);
-    assert.match(api, /"suggestion",\n\];/);
+    // In the type and in NOTIFICATION_TYPES, wherever it sits: newer types follow it.
+    assert.match(api, /^\s*\| "suggestion"\s/m);
+    assert.match(api, /^\s*"suggestion",\s/m);
     const strings = read("../lib/notificationStrings.ts");
     assert.match(strings, /type_suggestion: "New suggestion"/);
     assert.match(strings, /type_suggestion: "اقتراح جديد"/);
