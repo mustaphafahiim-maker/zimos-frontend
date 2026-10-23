@@ -249,7 +249,7 @@ describe("the detailed page", () => {
     renderPage("?tab=protection&range=90d");
     expect(await screen.findByText("Bots · Script or scanner")).toBeTruthy();
     expect(screen.getByText("Refused · Origin not allowed")).toBeTruthy();
-    expect(screen.getByText("Counts are kept 30 days: this shows the last 30.")).toBeTruthy();
+    expect(screen.getByText("Counts are kept 30 days, so this covers the last 30 days only.")).toBeTruthy();
     expect(screen.getByText(/Allowed origins only/)).toBeTruthy();
     expect(mocked.getProtection).toHaveBeenCalledWith("90d");
   });
