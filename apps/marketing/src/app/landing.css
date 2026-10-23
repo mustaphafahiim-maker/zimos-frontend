@@ -1231,7 +1231,9 @@ html {
   list-style: none;
   margin: 0;
   padding: 0;
-  animation: lz-marquee 38s linear infinite;
+  /* 38s for the first ten platforms; the list grew by about a third
+     (2026-10-23), so the time did too and the strip keeps its pace. */
+  animation: lz-marquee 52s linear infinite;
 }
 
 [dir="rtl"] .lz-marquee__track {
@@ -1285,7 +1287,7 @@ html {
   block-size: 100%;
 }
 
-/* Brands whose logo is the name itself (Aramex, InstaPay). */
+/* Brands whose logo is the name itself (Turbo, InstaPay). */
 .lz-logo--word {
   inline-size: auto;
   padding: 6px 10px;
@@ -1295,6 +1297,26 @@ html {
   block-size: 16px;
   inline-size: auto;
   max-inline-size: none;
+}
+
+/* A mark drawn white for a dark ground (Turbo). */
+.lz-logo--dark {
+  background: #0b1220;
+  box-shadow: none;
+}
+
+/* Not connected yet: the mark dimmed, and "Soon" after it. */
+.lz-marquee__track li.is-soon .lz-logo {
+  opacity: 0.6;
+}
+
+.lz-soon {
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  background: var(--lz-soft);
+  color: var(--lz-accent-deep);
 }
 
 /* Track = the list twice, so moving it by half lands on the same picture. */
@@ -1451,12 +1473,15 @@ html {
 }
 
 /* ══ 2b) Templates — real stores, scroll on hover ═════════════════════ */
+/* Four stores (lib/store-shots.ts): two by two, in a row narrower than the
+   page so the cards don't grow too large. */
 .lz-tpl {
   display: grid;
-  gap: 28px 20px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 28px 24px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  max-inline-size: 60rem;
   list-style: none;
-  margin: 0;
+  margin: 0 auto;
   padding: 0;
 }
 
@@ -1594,10 +1619,20 @@ html {
   margin-block-start: 22px;
 }
 
-@media (max-width: 1000px) {
-  .lz-tpl {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+.lz-tpl__credits {
+  margin: 8px auto 0;
+  max-inline-size: 72ch;
+  padding-inline: 20px;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--lz-text);
+}
+
+.lz-tpl__credits a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 /* Phones: a row to swipe through, each card a phone showing the store as a
