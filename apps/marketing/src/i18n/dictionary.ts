@@ -37,13 +37,18 @@ export interface Dictionary {
     homeAria: string;
     /** Accessible name of the primary <nav>. */
     primaryLabel: string;
-    product: string;
-    solutions: string;
+    benefits: string;
+    templates: string;
+    howItWorks: string;
     pricing: string;
     faq: string;
-    /** Visible label of the language switcher — the name of the OTHER language. */
+    /** Visible label of the footer's language switcher — the name of the OTHER language. */
     switchLanguage: string;
     switchLanguageAria: string;
+    /** Accessible name of the AR | EN switch in the header. */
+    languageLabel: string;
+    /** Beside the theme switch in the phone menu. */
+    themeLabel: string;
     switchToDark: string;
     switchToLight: string;
     openMenu: string;
@@ -54,67 +59,85 @@ export interface Dictionary {
   };
 
   hero: {
-    /** Main headline — the "Build. Sell. Grow." phrase. */
-    headline: string;
-    subheadline: string;
+    /** The slogan: these lines, then `accent` in the brand blue. */
+    lines: string[];
+    accent: string;
+    body: string;
     primaryCta: string;
     secondaryCta: string;
-    /** Microcopy under the CTAs. */
-    ctaNote: string;
-    visual: HeroVisual;
+    /** Under the buttons, each with a tick. */
+    ticks: [string, string, string];
+    /** In the address pill of the browser frame. */
+    frameLabel: string;
+    imageAlt: string;
+    /** The cards floating over the screenshot — illustration, generic labels. */
+    chips: {
+      template: Chip;
+      published: Chip;
+      order: Chip;
+    };
   };
 
-  platform: {
+  /** Real stores built on the template library, in a gallery. */
+  templates: {
     kicker: string;
     heading: string;
     intro: string;
-    items: [
-      Capability,
-      Capability,
-      Capability,
-      Capability,
-      Capability,
-      Capability,
-      Capability,
-      Capability,
-    ];
+    /** "Template {n}" under each card. */
+    templateLabel: string;
+    /** Category of each look shown (lib/store-shots.ts), by look number ("01" …). */
+    categories: Record<string, string>;
+    /** On a computer: pointing at a card scrolls its picture. */
+    hoverHint: string;
+    /** On a phone: the cards are a row to swipe through. */
+    swipeHint: string;
+    cta: string;
+    caption: string;
   };
 
-  lifecycle: {
-    kicker: string;
-    heading: string;
-    intro: string;
-    points: [string, string, string];
-    flowCaption: string;
-    flowAria: string;
-    trackingLabel: string;
-    steps: [FlowStep, FlowStep, FlowStep, FlowStep];
-  };
-
-  howItWorks: {
-    kicker: string;
-    heading: string;
-    intro: string;
-    /** Visible "Step" label preceding the ordinal. */
-    stepLabel: string;
-    steps: [HowStep, HowStep, HowStep];
-  };
-
-  deepDives: {
-    kicker: string;
-    heading: string;
-    intro: string;
-    confirm: DeepDive & { visual: ConfirmVisual };
-    profit: DeepDive & { visual: ProfitVisual };
-    funnels: DeepDive & { visual: FunnelVisual };
-  };
-
+  /** The strip of platforms under the hero; their names are not translated. */
   integrations: {
+    label: string;
+    note: string;
+  };
+
+  benefits: {
     kicker: string;
     heading: string;
     intro: string;
-    groups: [IntegrationGroup, IntegrationGroup, IntegrationGroup];
-    note: string;
+    /** The big card: the store, with the chain that follows it as chips. */
+    hero: { title: string; body: string; chips: [string, string, string, string, string] };
+    items: [Capability, Capability, Capability, Capability, Capability, Capability];
+    /** The wide card: automations, with a feed of what happens on its own. */
+    wide: { title: string; body: string; feed: [Chip, Chip, Chip] };
+  };
+
+  journey: {
+    kicker: string;
+    heading: string;
+    intro: string;
+    /** Who does a step. */
+    by: Record<StepOwner, string>;
+    steps: [JourneyStep, JourneyStep, JourneyStep, JourneyStep, JourneyStep];
+  };
+
+  /** Real screens of the dashboard behind tabs. */
+  dashboard: {
+    kicker: string;
+    heading: string;
+    intro: string;
+    tabs: [ShotTab, ShotTab, ShotTab];
+    caption: string;
+  };
+
+  /** "What should reassure you": what is paid for, how, and whose data it is. */
+  trust: {
+    kicker: string;
+    heading: string;
+    intro: string;
+    points: [TrustPoint, TrustPoint, TrustPoint, TrustPoint];
+    /** The link in the payment point. */
+    refundLink: string;
   };
 
   /** Plans and prices come from the API (GET /plans/public); these are the words around them. */
@@ -154,12 +177,12 @@ export interface Dictionary {
     features: Record<PlanFeatureKey, string>;
   };
 
-  /** What the service is and what is sold — said plainly on the home page. */
+  /** What the service is and what is sold — said plainly on the pricing page. */
   service: {
     kicker: string;
     heading: string;
     body: string;
-    points: [string, string, string];
+    points: [TrustPoint, TrustPoint, TrustPoint, TrustPoint];
   };
 
   /** Shared by the policy and contact pages. */
@@ -183,20 +206,24 @@ export interface Dictionary {
   faq: {
     kicker: string;
     heading: string;
-    intro: string;
+    /** Under the heading, linking to the contact page. */
+    contactLink: string;
     items: FaqItem[];
   };
 
-  /** Navy closing band; its heading is `brand.limits`. */
+  /** The navy closing band. */
   finalCta: {
+    heading: string;
     body: string;
     primaryCta: string;
+    /** The sign-in link beside the button. */
     secondaryCta: string;
   };
 
   footer: {
     navLabel: string;
-    columns: FooterColumn[];
+    /** `#anchor` for a home-page section, `/path` for a page (the locale is prefixed at render). */
+    links: { label: string; href: string }[];
     rights: string;
     languageLabel: string;
     registration: string;
@@ -204,101 +231,40 @@ export interface Dictionary {
   };
 }
 
-export interface HeroVisual {
-  aria: string;
-  storeLabel: string;
-  liveLabel: string;
-  funnelTitle: string;
-  funnelSteps: [string, string, string, string];
-  pipelineTitle: string;
-  columns: [string, string, string];
-  order: string;
-  confirmTitle: string;
-  confirmBody: string;
-}
-
-export interface Capability {
-  id:
-    | "store"
-    | "funnels"
-    | "confirmation"
-    | "shipping"
-    | "analytics"
-    | "fraud"
-    | "automations"
-    | "teams";
-  title: string;
-  body: string;
-}
-
-export interface FlowStep {
-  /** Stable id, not shown. */
-  id: "placed" | "confirmed" | "tracked" | "delivered";
+/** A two-line label: a bold title and a small line under it. */
+export interface Chip {
   title: string;
   detail: string;
 }
 
-export interface HowStep {
-  id: "build" | "sell" | "grow";
+export interface Capability {
+  id: "mobile" | "domain" | "funnels" | "confirmation" | "shipping" | "analytics";
   title: string;
   body: string;
 }
 
-export interface DeepDive {
-  kicker: string;
-  heading: string;
+export type StepOwner = "you" | "auto" | "zimos";
+
+export interface JourneyStep {
+  id: "template" | "customize" | "publish" | "confirm" | "ship";
+  by: StepOwner;
+  title: string;
   body: string;
-  points: [string, string, string];
 }
 
-export interface ConfirmVisual {
-  aria: string;
-  queueTitle: string;
-  order: string;
-  cities: [string, string, string];
-  statusCalling: string;
-  statusConfirmed: string;
-  statusWaiting: string;
-  chatTitle: string;
-  storeMessage: string;
-  customerReply: string;
-  systemMessage: string;
-}
-
-export interface ProfitVisual {
-  aria: string;
-  title: string;
-  illustrative: string;
-  bars: [string, string, string, string, string, string];
-  metrics: [string, string, string];
-}
-
-export interface FunnelVisual {
-  aria: string;
-  title: string;
-  landing: string;
-  checkout: string;
-  bump: string;
-  upsell: string;
-  accept: string;
-  decline: string;
-  downsell: string;
-  thankYou: string;
-}
-
-export interface IntegrationGroup {
+export interface ShotTab {
+  /** The capture in public/product: `{id}-{locale}.webp`. */
+  id: "home" | "orders" | "profit";
   label: string;
-  items: string[];
+  alt: string;
 }
 
+export interface TrustPoint {
+  title: string;
+  body: string;
+}
 
 export interface FaqItem {
   question: string;
   answer: string;
-}
-
-export interface FooterColumn {
-  title: string;
-  /** `#anchor` for a home-page section, `/path` for a page (the locale is prefixed at render). */
-  links: { label: string; href: string }[];
 }

@@ -24,10 +24,11 @@ export const plusJakarta = Plus_Jakarta_Sans({
 });
 
 // Arabic headings and body (not a variable font — weights are explicit).
-// Tajawal has no 600, so `font-semibold` renders at 700.
+// Tajawal has no 600, so `font-semibold` renders at 700; 800 is for the
+// landing's headings.
 export const tajawal = Tajawal({
   subsets: ["arabic"],
-  weight: ["400", "500", "700"],
+  weight: ["400", "500", "700", "800"],
   display: "swap",
   variable: "--font-tajawal",
 });

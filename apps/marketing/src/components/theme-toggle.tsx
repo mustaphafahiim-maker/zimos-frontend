@@ -2,7 +2,7 @@
 
 import { useCallback, useSyncExternalStore } from "react";
 import { useI18n } from "@/i18n/provider";
-import { MoonIcon, SunIcon } from "./icons";
+import { Moon, Sun } from "./duo-icons";
 
 type Theme = "light" | "dark";
 
@@ -53,7 +53,8 @@ function subscribe(onStoreChange: () => void): () => void {
   };
 }
 
-export function ThemeToggle({ className = "" }: { className?: string }) {
+/** The round light/dark switch of the header (`lz-top__icon` in landing.css). */
+export function ThemeToggle({ className = "lz-top__icon" }: { className?: string }) {
   const { dict } = useI18n();
 
   // The server snapshot is a stable "light" so SSR and the first client render
@@ -74,16 +75,8 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
   const label = theme === "dark" ? dict.nav.switchToLight : dict.nav.switchToDark;
 
   return (
-    <button
-      type="button"
-      onClick={toggle}
-      aria-label={label}
-      title={label}
-      className={`cursor-pointer inline-flex size-9 items-center justify-center rounded-lg border border-line bg-paper-raised text-ink-soft transition-colors hover:border-ink-soft hover:text-ink ${className}`}
-    >
-      <span className="text-[1.05rem]" suppressHydrationWarning>
-        {theme === "dark" ? <SunIcon /> : <MoonIcon />}
-      </span>
+    <button type="button" onClick={toggle} aria-label={label} title={label} className={className}>
+      <span suppressHydrationWarning>{theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}</span>
     </button>
   );
 }
