@@ -22,14 +22,18 @@ export function httpUrlOrNull(value: unknown): string | null {
  * relative path, data:, javascript:) is ignored, as if unset. Without one, the
  * store's logo is all three icons, as its plain URL — no image optimisation.
  * Without either, undefined: the storefront's default icons (app/icon.png,
- * favicon.ico, apple-icon.png) stay as they are.
+ * favicon.ico, apple-icon.png) stay as they are — unless the store hides the
+ * platform branding (`neutral`), when a plain shop glyph stands in for the
+ * ZIMOS mark.
  */
 export function storeIcons({
   faviconUrl,
   logoUrl,
+  neutral = false,
 }: {
   faviconUrl?: string | null;
   logoUrl?: string | null;
+  neutral?: boolean;
 }): Metadata["icons"] | undefined {
   const favicon = httpUrlOrNull(faviconUrl);
   const logo = httpUrlOrNull(logoUrl);
@@ -38,5 +42,14 @@ export function storeIcons({
     return { icon: favicon, shortcut: favicon, ...(apple ? { apple } : {}) };
   }
   if (logo) return { icon: logo, shortcut: logo, apple: logo };
+  if (neutral) return { icon: NEUTRAL_ICON, shortcut: NEUTRAL_ICON, apple: NEUTRAL_APPLE_ICON };
   return undefined;
 }
+
+/**
+ * The plain shop glyph with no brand on it (public/neutral-icon.*): the tab
+ * icon of a store that hides the platform branding and has no favicon or
+ * logo of its own. The SVG serves the tab; iOS wants a PNG for the home screen.
+ */
+export const NEUTRAL_ICON = "/neutral-icon.svg";
+export const NEUTRAL_APPLE_ICON = "/neutral-icon-180.png";

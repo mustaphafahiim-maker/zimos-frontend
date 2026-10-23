@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { httpUrlOrNull, storeIcons } from "./storeIcons";
+import { NEUTRAL_APPLE_ICON, NEUTRAL_ICON, httpUrlOrNull, storeIcons } from "./storeIcons";
 
 const LOGO = "https://media.example.com/stores/abc/logo.png";
 
@@ -18,6 +18,19 @@ describe("storeIcons", () => {
     expect(storeIcons({})).toBeUndefined();
     expect(storeIcons({ logoUrl: null })).toBeUndefined();
     expect(storeIcons({ logoUrl: "   " })).toBeUndefined();
+  });
+
+  it("a store that hides the platform branding gets the neutral glyph instead of the defaults — and only then", () => {
+    expect(storeIcons({ neutral: true })).toEqual({ icon: NEUTRAL_ICON, shortcut: NEUTRAL_ICON, apple: NEUTRAL_APPLE_ICON });
+    expect(storeIcons({ logoUrl: "javascript:alert(1)", neutral: true })).toEqual({ icon: NEUTRAL_ICON, shortcut: NEUTRAL_ICON, apple: NEUTRAL_APPLE_ICON });
+    // Its own favicon or logo still comes first.
+    expect(storeIcons({ logoUrl: LOGO, neutral: true })).toEqual({ icon: LOGO, shortcut: LOGO, apple: LOGO });
+    expect(storeIcons({ faviconUrl: "https://cdn.example.com/fav.ico", neutral: true })).toEqual({
+      icon: "https://cdn.example.com/fav.ico",
+      shortcut: "https://cdn.example.com/fav.ico",
+    });
+    // Every other store is unchanged.
+    expect(storeIcons({ neutral: false })).toBeUndefined();
   });
 
   it("leaves the default icons for a logo that is not an http(s) URL", () => {
