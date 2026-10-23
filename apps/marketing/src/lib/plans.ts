@@ -15,6 +15,7 @@ export type PlanFeatureKey =
   | "api_access"
   | "staff_accounts"
   | "advanced_analytics"
+  | "visitor_insights"
   | "remove_branding"
   | "priority_support";
 

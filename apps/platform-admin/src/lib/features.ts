@@ -17,3 +17,11 @@ export const TWO_FACTOR_ENABLED = import.meta.env.VITE_TWO_FACTOR_ENABLED === "t
  * TRAFFIC_DETAILS_ENABLED and TRAFFIC_GUARD_ENABLED, which fill it.
  */
 export const STORE_TRAFFIC_ENABLED = import.meta.env.VITE_STORE_TRAFFIC_ENABLED === "true";
+
+/**
+ * Site traffic in detail: zimos.co visits laid out as Store traffic (filters,
+ * each visit in order with its account, campaigns, what the beacon's guard
+ * kept out). Pairs with the API's SITE_TRAFFIC_DETAILS_ENABLED, which fills
+ * it; off, the page is the summary it was.
+ */
+export const SITE_TRAFFIC_DETAILS_ENABLED = import.meta.env.VITE_SITE_TRAFFIC_DETAILS_ENABLED === "true";

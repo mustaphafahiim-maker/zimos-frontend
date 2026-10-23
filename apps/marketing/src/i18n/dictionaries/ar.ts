@@ -287,6 +287,7 @@ export const ar: Dictionary = {
       api_access: "الوصول عبر API",
       staff_accounts: "حسابات الفريق",
       advanced_analytics: "تحليلات متقدمة",
+      visitor_insights: "تحليلات الزوار المفصّلة",
       remove_branding: "إزالة شعار المنصة",
       priority_support: "دعم ذو أولوية",
     },
