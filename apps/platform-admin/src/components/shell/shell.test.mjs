@@ -86,6 +86,8 @@ describe("the console's frame is the merchant dashboard's", () => {
       assert.ok(cls(mine), hook);
       assert.equal(cls(mine), cls(theirs), hook);
     }
+    // A group's heading in the sheet, in the brand like the side menu's.
+    assert.equal(classAfter(mine, "<h3 id={headingId}"), classAfter(theirs, "<h3 id={headingId}"));
     assert.match(mine, /data-slot="phone-menu"/);
   });
 

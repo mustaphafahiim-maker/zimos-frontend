@@ -188,7 +188,7 @@ function PhoneMenuSheet({ onClose }: { onClose: () => void }) {
             return (
               <div key={group.id} role="group" aria-labelledby={heading ? headingId : undefined} className="mt-5 first:mt-0">
                 {heading && (
-                  <h3 id={headingId} className="flex h-8 items-center ps-1 pb-1 font-sans text-[13px] font-semibold tracking-normal text-ink-soft">
+                  <h3 id={headingId} className="flex h-8 items-center ps-1 pb-1 font-sans text-[13px] font-semibold tracking-normal text-primary">
                     {heading}
                   </h3>
                 )}
