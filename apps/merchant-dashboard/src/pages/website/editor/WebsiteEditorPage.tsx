@@ -31,7 +31,7 @@ import { deepTextOf, inlineTextIds, sectionHidden } from "./canvasTools";
 import { ShellPanel } from "./ShellPanels";
 import { sectionElements, sectionLabel, soleElementId, type BlockPreset } from "./blocks";
 import { EditorLocaleContext, editorUi, useEditorLocale } from "./editorLocale";
-import { shellPartLabel, withShellSize, type ShellPart } from "./storeShell";
+import { shellPartLabel, withShellSize, withShellText, type ShellPart } from "./storeShell";
 import { stepEdit, type CanvasEdit } from "@/lib/canvasDrag";
 import { EditorScreenProvider, ShellPartFocusProvider, screenOf } from "./editorScreen";
 import { StorePageList, storePageName, type StorePath } from "./StorePageList";
@@ -734,6 +734,11 @@ function WebsiteEditor() {
                 <EditorCanvas
                   storePath={shownStoreView}
                   templateTools={xsEditor}
+                  onShellText={(path, text) => {
+                    // A header or footer word edited on the page: the same change its panel would make.
+                    const next = withShellText(doc.look, path, text, ui.footerStandardTitle);
+                    if (next) doc.updateLook(next, `canvas:shell-text:${path}`);
+                  }}
                   onPickLogo={(part) =>
                     // A click on the picked header's or footer's logo: the media library, then the store's logo
                     // (the one every part shows) — or the footer's own picture, where the footer has one.

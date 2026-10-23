@@ -1,6 +1,6 @@
 import { safeUrl } from "@/components/page-renderer/props";
 import { HIDDEN_ATTR, elementNode, inlineTextNode, styleBox } from "./canvasGeometry";
-import { OWN_KEYS, ownPatchCss } from "@/components/page-renderer/xs/own";
+import { ITEM_OWN_KEYS, ITEM_OWN_PROPERTIES, OWN_KEYS, ownPatchCss, xsItemOwn } from "@/components/page-renderer/xs/own";
 
 /**
  * `zimos:patch` — the editor's small edits, applied to the page that is
@@ -17,6 +17,8 @@ import { OWN_KEYS, ownPatchCss } from "@/components/page-renderer/xs/own";
  *             stands (page-renderer/xs/own.tsx ownPatchCss, which checks each value)
  *   words     a band's words: each [was, is] — the text that showed, and what it is now
  *   pictures  a band's pictures by their place in its props ("items.2.image" → address)
+ *   itemOwn   one entry of a band's list, its own colours as they now stand, by
+ *             its place ("slides.2" → { titleColor }; page-renderer/xs/own.tsx xsItemOwn)
  *
  * Everything arrives in a message, so every value is checked again here: a
  * property outside the list or a value that is not a plain length, keyword or
@@ -32,9 +34,11 @@ export interface PatchOp {
   own?: Record<string, unknown>;
   words?: Array<[string, string]>;
   pictures?: Record<string, string>;
+  itemOwn?: Record<string, Record<string, unknown>>;
 }
 
 const MAX_WORDS = 50;
+const ITEM_PATH = /^[A-Za-z][A-Za-z0-9]*\.[0-9]{1,2}$/;
 const PICTURE_PATH = /^[A-Za-z][A-Za-z0-9]*(?:\.[0-9]{1,2}\.[A-Za-z][A-Za-z0-9]*)?(?:\.[0-9]{1,2})?$/;
 
 const MAX_OPS = 500;
@@ -126,6 +130,15 @@ export function readPatch(raw: unknown): PatchOp[] {
         if (url && PICTURE_PATH.test(path)) pictures[path] = url;
       }
       if (Object.keys(pictures).length > 0) op.pictures = pictures;
+    }
+    if (o.itemOwn && typeof o.itemOwn === "object" && !Array.isArray(o.itemOwn)) {
+      // Only the colour props, by a well-formed place; the colours themselves are checked by xsItemOwn.
+      const itemOwn: Record<string, Record<string, unknown>> = {};
+      for (const [path, value] of Object.entries(o.itemOwn as Record<string, unknown>).slice(0, 40)) {
+        if (!ITEM_PATH.test(path) || !value || typeof value !== "object" || Array.isArray(value)) continue;
+        itemOwn[path] = Object.fromEntries(Object.entries(value as Record<string, unknown>).filter(([key]) => ITEM_OWN_KEYS.includes(key)));
+      }
+      if (Object.keys(itemOwn).length > 0) op.itemOwn = itemOwn;
     }
     ops.push(op);
   }
@@ -220,6 +233,26 @@ function setPictures(marker: HTMLElement, pictures: Record<string, string>): boo
   return changed;
 }
 
+/** An entry's own colours: its custom properties and marker set as the render would set them. */
+function setItemOwn(marker: HTMLElement, itemOwn: Record<string, Record<string, unknown>>): boolean {
+  let changed = false;
+  for (const [path, values] of Object.entries(itemOwn)) {
+    const own = xsItemOwn(values);
+    const style = (own.style ?? {}) as Record<string, string>;
+    for (const node of Array.from(marker.querySelectorAll<HTMLElement>(`[data-xs-item="${CSS.escape(path)}"]`))) {
+      for (const property of ITEM_OWN_PROPERTIES) {
+        if (style[property]) node.style.setProperty(property, style[property]);
+        else node.style.removeProperty(property);
+      }
+      const marks = own["data-xs-own-item"];
+      if (marks) node.setAttribute("data-xs-own-item", marks);
+      else node.removeAttribute("data-xs-own-item");
+      changed = true;
+    }
+  }
+  return changed;
+}
+
 /** Applies the ops to the page; true when anything on it changed (the overlay then measures again). */
 export function applyPatch(ops: PatchOp[]): boolean {
   let changed = false;
@@ -244,6 +277,7 @@ export function applyPatch(ops: PatchOp[]): boolean {
     if (op.own && setOwn(op.elementId, op.own)) changed = true;
     if (op.words && setWords(marker, op.words)) changed = true;
     if (op.pictures && setPictures(marker, op.pictures)) changed = true;
+    if (op.itemOwn && setItemOwn(marker, op.itemOwn)) changed = true;
   }
   return changed;
 }

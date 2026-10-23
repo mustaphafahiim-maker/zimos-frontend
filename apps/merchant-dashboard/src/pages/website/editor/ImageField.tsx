@@ -4,6 +4,7 @@ import { Alert, Button, Label, Spinner } from "@store-builder/ui";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { getErrorMessage } from "@/lib/errors";
+import { shownPicture } from "@/lib/storefrontUrl";
 import { ACCEPTED_IMAGE_ACCEPT, compressImageIfNeeded, validateImageFile } from "@/lib/media";
 import { editorUi, useEditorLocale } from "./editorLocale";
 import { useInspectorEnv, type RequestImage } from "./inspector/env";
@@ -108,7 +109,7 @@ function Thumb({ src, onRemove }: { src: string; onRemove: () => void }) {
           <IconImage className="size-5" aria-hidden />
         </div>
       ) : (
-        <img src={src} alt="" className="size-full object-cover" onError={() => setBroken(true)} />
+        <img src={shownPicture(src)} alt="" className="size-full object-cover" onError={() => setBroken(true)} />
       )}
       <button
         type="button"

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { StoreLink } from "@/components/StoreRoute";
 import { xsBackground } from "@/lib/xsPicture";
+import type { XsItemOwn } from "./own";
 
 export interface XsSlide {
   key: string;
@@ -15,6 +16,8 @@ export interface XsSlide {
   buttonHref: string | null;
   /** The point the picture centres on ("30% 60%"); null keeps the look's. */
   focal?: string | null;
+  /** Its own colours, over the band's (own.tsx xsItemOwn). */
+  own?: XsItemOwn;
 }
 
 /**
@@ -71,9 +74,10 @@ export function XsSlider({
           key={slide.key}
           className="xs-slider__slide"
           data-xs-item={`slides.${slide.key}`}
+          data-xs-own-item={slide.own?.["data-xs-own-item"]}
           data-active={index === active ? "" : undefined}
           aria-hidden={index === active ? undefined : true}
-          style={index === 0 || rest || index === active ? xsBackground(slide.image, slide.focal) : undefined}
+          style={{ ...slide.own?.style, ...(index === 0 || rest || index === active ? xsBackground(slide.image, slide.focal) : undefined) }}
           data-xs-bg={`slides.${slide.key}.image`}
           data-xs-bg-src={slide.image}
         >

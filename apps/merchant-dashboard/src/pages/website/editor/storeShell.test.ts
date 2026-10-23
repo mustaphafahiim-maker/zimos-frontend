@@ -7,6 +7,7 @@ import {
   readHeaderLook,
   sameFooter,
   sameHeader,
+  withShellText,
   submenuCount,
   writeFooter,
   writeHeader,
@@ -254,5 +255,34 @@ describe("the navigation layout in the saved header", () => {
     expect(lookToShellPreview(themeSettings, side).header.layout).toBe("side");
     expect(lookToShellPreview(themeSettings, look).header).not.toHaveProperty("layout");
     expect(themeSettingsSize(themeSettings, side) - themeSettingsSize(themeSettings, look)).toBe(',"layout":"side"'.length);
+  });
+});
+
+describe("a header or footer word edited where it stands on the page", () => {
+  const look = { header: DEFAULT_HEADER_LOOK, footer: DEFAULT_FOOTER_LOOK };
+
+  it("makes the built-in menu the merchant's own, the edited link renamed", () => {
+    const next = withShellText(look, "header.menu.0.label", "Start here", "Shop")!;
+    expect(next.header.menu).toHaveLength(1);
+    expect(next.header.menu![0]).toMatchObject({ kind: "home", label: "Start here" });
+    // The footer is untouched.
+    expect(next.footer).toBe(look.footer);
+  });
+
+  it("renames a footer group and one of its links, and changes the footer's line", () => {
+    const titled = withShellText(look, "footer.groups.0.title", "Help", "Shop")!;
+    expect(titled.footer.groups).toHaveLength(1);
+    expect(titled.footer.groups![0].title).toBe("Help");
+    const linked = withShellText(titled, "footer.groups.0.links.1.label", "My bag", "Shop")!;
+    expect(linked.footer.groups![0].links[1]).toMatchObject({ kind: "cart", label: "My bag" });
+    expect(linked.footer.groups![0].title).toBe("Help");
+    expect(withShellText(look, "footer.text", "Made by hand", "Shop")!.footer.text).toBe("Made by hand");
+  });
+
+  it("refuses a place that holds nothing", () => {
+    expect(withShellText(look, "header.menu.5.label", "x", "Shop")).toBeNull();
+    expect(withShellText(look, "footer.groups.3.title", "x", "Shop")).toBeNull();
+    expect(withShellText(look, "footer.groups.0.links.9.label", "x", "Shop")).toBeNull();
+    expect(withShellText(look, "header.logo", "x", "Shop")).toBeNull();
   });
 });

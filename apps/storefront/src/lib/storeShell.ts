@@ -284,6 +284,18 @@ export interface ResolvedShellLink {
  * usable address is dropped, and so is an unlabelled one that doesn't point at
  * a built-in page — a bare URL is no name to show a shopper.
  */
+/**
+ * Where a header or footer link's words are kept in the store's settings, for the editor's preview
+ * to edit them where they stand: "header.menu.2.label". A link of the merchant's own list says its
+ * place in its key ("2:/products"); a built-in one (the editor starts the list from those, in the
+ * same order) gives its place among them. Undefined: words kept elsewhere (a page's own title).
+ */
+export function shellTextPath(list: string, link: ResolvedShellLink, builtInAt?: number): string | undefined {
+  const own = /^(\d+):/.exec(link.key);
+  if (own) return `${list}.${own[1]}.label`;
+  return builtInAt === undefined ? undefined : `${list}.${builtInAt}.label`;
+}
+
 export function resolveShellLinks(
   links: ShellLink[],
   common: { home: string; cart: string; trackOrder: string }

@@ -185,6 +185,39 @@ export function XsOwn({ props, children, id }: { props: Props; children: ReactNo
   );
 }
 
+/** An entry's own colours: prop → [marker, custom property] (app/xs-shell.css "One entry of a band's list"). */
+const ITEM_COLOURS: Record<string, [string, string]> = {
+  titleColor: ["title", "--xs-item-title"],
+  textColor: ["text", "--xs-item-text"],
+  buttonColor: ["button", "--xs-item-button"],
+};
+
+/**
+ * One entry of a band's list restyled on its own — a slide, a banner, a card:
+ * the colour of its title, of its words and of its button, over the band's
+ * and the template's. Spread on the entry's own element (the one carrying
+ * `data-xs-item`); app/xs-shell.css turns each marker into its rules. Only a
+ * #rrggbb colour is taken, and an entry with none chosen gets nothing at all.
+ */
+export type XsItemOwn = { style?: CSSProperties; "data-xs-own-item"?: string };
+
+export function xsItemOwn(item: Props): XsItemOwn {
+  const style: Record<string, string> = {};
+  const marks: string[] = [];
+  for (const [key, [mark, property]] of Object.entries(ITEM_COLOURS)) {
+    const value = item[key];
+    if (!isHex(value)) continue;
+    style[property] = value.toLowerCase();
+    marks.push(mark);
+  }
+  return marks.length ? { style: style as CSSProperties, "data-xs-own-item": marks.join(" ") } : {};
+}
+
+/** The props an entry's own colours are made of (sent in a patch, components/preview/canvasPatch.ts). */
+export const ITEM_OWN_KEYS: readonly string[] = Object.keys(ITEM_COLOURS);
+/** Each entry colour's custom property, for a patch that clears one. */
+export const ITEM_OWN_PROPERTIES: readonly string[] = Object.values(ITEM_COLOURS).map(([, property]) => property);
+
 /** The props a band's own look is made of (the editor sends these in a patch, components/preview/canvasPatch.ts). */
 export const OWN_KEYS: readonly string[] = [...Object.keys(COLOURS), ...Object.keys(NUMBERS), ...Object.keys(CHOICES), "flip"];
 

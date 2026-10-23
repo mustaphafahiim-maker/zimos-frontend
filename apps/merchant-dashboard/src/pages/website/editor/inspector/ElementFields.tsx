@@ -813,7 +813,7 @@ function ColorField({ label, hint, value, onChange }: { label: string; hint?: st
   const locale = useEditorLocale();
   const chosen = typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value) ? value : null;
   return (
-    <ColorWell label={label} hint={hint} value={chosen} fallback="#ffffff" onChange={onChange}>
+    <ColorWell label={label} hint={hint} value={chosen} fallback="#ffffff" unset={locale === "ar" ? "لون القالب" : "Template's"} onChange={onChange}>
       {chosen ? (
         <button type="button" className="text-xs text-ink-soft underline underline-offset-2 hover:text-ink" onClick={() => onChange(undefined)}>
           {locale === "ar" ? "رجّع لون القالب" : "Back to the template's colour"}

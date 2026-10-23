@@ -534,6 +534,30 @@ for (const type of XS_TYPES) {
 }
 
 /**
+ * One entry of a band's list coloured on its own — a slide, a banner, a card
+ * (storefront xs/own.tsx xsItemOwn): its title, its words and its button, over
+ * the band's colours. Each list is offered only the colours of what its
+ * entries have. Lists the page does not mark entry by entry are left out.
+ */
+const ITEM_COLOUR_TYPES: readonly XsType[] = ["xs_slider", "xs_banners", "xs_story", "xs_features", "xs_quotes", "xs_team", "xs_posts"];
+/** [what the entry has → the colour offered for it] — the first match names it. */
+const ITEM_COLOURS: ReadonlyArray<{ key: string; from: ReadonlyArray<[string, string, string]> }> = [
+  { key: "titleColor", from: [["heading", "Colour: title", "لون العنوان"], ["title", "Colour: title", "لون العنوان"], ["name", "Colour: name", "لون الاسم"]] },
+  { key: "textColor", from: [["text", "Colour: text", "لون النص"], ["body", "Colour: text", "لون النص"], ["quote", "Colour: text", "لون النص"], ["role", "Colour: text", "لون النص"]] },
+  { key: "buttonColor", from: [["buttonLabel", "Colour: button", "لون الزر"], ["linkLabel", "Colour: link", "لون الرابط"]] },
+];
+for (const type of ITEM_COLOUR_TYPES) {
+  for (const field of XS_ELEMENT_SPECS[type].fields) {
+    if (field.kind !== "itemList") continue;
+    const keys = new Set(field.fields.map((sub) => sub.key));
+    for (const { key, from } of ITEM_COLOURS) {
+      const named = from.find(([sub]) => keys.has(sub));
+      if (named) field.fields.push({ key, label: named[1], labelAr: named[2], kind: "color" });
+    }
+  }
+}
+
+/**
  * The inspector's groups for an xs band, in the order it shows them: every
  * field of a band belongs to one, so a merchant looking for "the size of the
  * pictures" opens Pictures instead of reading a long list. `hint` says what

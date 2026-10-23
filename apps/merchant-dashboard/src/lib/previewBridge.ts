@@ -140,6 +140,7 @@ export type FrameMessage =
   | { type: "zimos:select-section"; sectionId: string }
   | { type: "zimos:select-element"; sectionId: string; elementId: string; elementType: string; item?: string }
   | { type: "zimos:pick-logo"; part: "header" | "footer" }
+  | { type: "zimos:shell-text"; path: string; text: string }
   | { type: "zimos:select-shell"; part: ShellPart; xsPart?: string }
   | { type: "zimos:insert-section"; index: number }
   | { type: "zimos:move-section"; sectionId: string; direction: "up" | "down" }
@@ -309,6 +310,8 @@ export interface PatchOp {
   words?: Array<[string, string]>;
   /** A band's pictures that changed, by their place in its props ("items.2.image"). */
   pictures?: Record<string, string>;
+  /** Entries of a band's list whose own colours changed, each with all of them as they now stand ("slides.2" → { titleColor }). */
+  itemOwn?: Record<string, Record<string, unknown>>;
 }
 
 export interface PatchMessage {
@@ -385,6 +388,15 @@ export function readFrameMessage(
         : null;
     case "zimos:pick-logo":
       return data.part === "header" || data.part === "footer" ? { type: "zimos:pick-logo", part: data.part } : null;
+    case "zimos:shell-text":
+      // A header or footer word edited on the page (storefront useShellText): where it is kept, and its words.
+      return typeof data.path === "string" &&
+        /^(?:header\.menu\.\d{1,2}\.label|footer\.groups\.\d{1,2}\.(?:title|links\.\d{1,2}\.label)|footer\.text)$/.test(data.path) &&
+        typeof data.text === "string" &&
+        data.text.trim() !== "" &&
+        data.text.length <= 300
+        ? { type: "zimos:shell-text", path: data.path, text: data.text }
+        : null;
     case "zimos:select-shell":
       if (!isShellPart(data.part)) return null;
       return typeof data.xsPart === "string" && /^[A-Za-z0-9_-]{1,40}$/.test(data.xsPart)
@@ -673,6 +685,8 @@ const XS_OWN_KEYS = new Set([
   "columns", "height", "width", "paddingTop", "paddingBottom", "gap", "headingSize", "titleSize", "textSize", "buttonSize", "buttonRadius", "imageHeight", "imageWidth", "imageRadius",
   "align", "headingWeight", "imageRatio", "imageFit", "flip",
 ]);
+/** One entry's own colours (storefront xs/own.tsx ITEM_OWN_KEYS): sent whole for that entry when any of them changes. */
+const XS_ITEM_OWN_KEYS = new Set(["titleColor", "textColor", "buttonColor"]);
 /** A band's props that hold a picture's address. */
 /** A band's string props that choose something rather than show words: only a render shows them. */
 const isSetting = (key: string) => /^(look|layout|collection|variant|kind|endsAt)$|href$|link$|url$/i.test(key);
@@ -686,6 +700,7 @@ const isPictureKey = (key: string) => /^(image|images|photo|picture|logo|avatar|
 function xsPatch(op: PatchOp, pa: Json, pb: Json): PatchOp | null {
   const words: Array<[string, string]> = [];
   const pictures: Record<string, string> = {};
+  const itemOwn: Record<string, Record<string, unknown>> = {};
   let own = false;
   const word = (was: unknown, is: unknown): boolean => {
     if (typeof was !== "string" || typeof is !== "string" || !was.trim() || !is.trim() || is.length > PATCH_TEXT_MAX) return false;
@@ -724,6 +739,10 @@ function xsPatch(op: PatchOp, pa: Json, pb: Json): PatchOp | null {
       if (!isObject(wa) || !isObject(wb)) return null;
       for (const field of new Set([...Object.keys(wa), ...Object.keys(wb)])) {
         if (same(wa[field], wb[field])) continue;
+        if (XS_ITEM_OWN_KEYS.has(field)) {
+          itemOwn[`${key}.${i}`] = Object.fromEntries(Object.entries(wb).filter(([k]) => XS_ITEM_OWN_KEYS.has(k)));
+          continue;
+        }
         if (isSetting(field)) return null;
         if (!(isPictureKey(field) ? picture(`${key}.${i}.${field}`, wb[field]) : word(wa[field], wb[field]))) return null;
       }
@@ -732,6 +751,7 @@ function xsPatch(op: PatchOp, pa: Json, pb: Json): PatchOp | null {
   if (own) op.own = Object.fromEntries(Object.entries(pb).filter(([key]) => XS_OWN_KEYS.has(key)));
   if (words.length > 0) op.words = words;
   if (Object.keys(pictures).length > 0) op.pictures = pictures;
+  if (Object.keys(itemOwn).length > 0) op.itemOwn = itemOwn;
   return op;
 }
 
@@ -801,7 +821,8 @@ function hasWork(op: PatchOp): boolean {
     op.style !== undefined ||
     op.own !== undefined ||
     op.words !== undefined ||
-    op.pictures !== undefined
+    op.pictures !== undefined ||
+    op.itemOwn !== undefined
   );
 }
 
@@ -809,7 +830,7 @@ function hasWork(op: PatchOp): boolean {
 export function patchKind(ops: PatchOp[]): "text" | "colour" | "size" | "picture" {
   if (ops.some((op) => op.imageSrc !== undefined || op.pictures !== undefined)) return "picture";
   const colour = (key: string) => /color$/i.test(key);
-  if (ops.some((op) => (op.style && Object.keys(op.style).some(colour)) || (op.own && Object.keys(op.own).some(colour)))) return "colour";
+  if (ops.some((op) => (op.style && Object.keys(op.style).some(colour)) || (op.own && Object.keys(op.own).some(colour)) || op.itemOwn !== undefined)) return "colour";
   if (ops.some((op) => op.style !== undefined || op.own !== undefined)) return "size";
   return "text";
 }

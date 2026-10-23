@@ -58,9 +58,12 @@ export function EditorCanvas({
   storePath = null,
   templateTools = false,
   onPickLogo,
+  onShellText,
 }: {
   /** The logo of the picked header or footer was clicked on the page. */
   onPickLogo?: (part: "header" | "footer") => void;
+  /** A header or footer word was edited on the page. */
+  onShellText?: (path: string, text: string) => void;
   /** One of the store's own pages to show instead of the page (StorePageList.tsx). */
   storePath?: string | null;
   /** An imported template's tools on the page (StorefrontPreview PreviewCanvas `templateTools`). */
@@ -179,6 +182,7 @@ export function EditorCanvas({
         onTextEdit,
         onCanvasKey,
         onPickLogo,
+        onShellText,
         templateTools,
         onInsert,
         onMoveSection,

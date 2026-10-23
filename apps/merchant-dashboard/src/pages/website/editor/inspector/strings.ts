@@ -175,6 +175,10 @@ const UI_EN = {
   itemDelete: "Remove",
   itemsFull: (max: string) => `That's the most it takes (${max}).`,
   itemsEmpty: "Nothing here yet.",
+  itemColours: "Its own colours",
+  itemColoursHint: "Only this one changes. Empty keeps the section's colours.",
+  itemColourReset: "Back to the section's colour",
+  itemColourUnset: "Section's",
 
   // --- pictures ---
   fromLibrary: "Choose from the library",
@@ -289,6 +293,10 @@ const UI_AR: InspectorUi = {
   itemDelete: "حذف",
   itemsFull: (max) => `هذا أقصى عدد (${max}).`,
   itemsEmpty: "لا يوجد شيء هنا بعد.",
+  itemColours: "ألوان خاصة به",
+  itemColoursHint: "يتغير هذا العنصر وحده. الحقل الفارغ يبقي ألوان القسم.",
+  itemColourReset: "رجّع لون القسم",
+  itemColourUnset: "لون القسم",
 
   fromLibrary: "اختيار من المكتبة",
 

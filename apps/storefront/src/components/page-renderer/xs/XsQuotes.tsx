@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { XsPicture, type XsPictureSize } from "@/components/xs/XsPicture";
+import type { XsItemOwn } from "./own";
 
 export interface XsQuote {
   /** Its place in the band's `items` as saved. */
@@ -11,6 +12,8 @@ export interface XsQuote {
   role: string;
   image: string | null;
   size: XsPictureSize | null;
+  /** Its own colours, over the band's (own.tsx xsItemOwn). */
+  own?: XsItemOwn;
 }
 
 /**
@@ -38,7 +41,7 @@ export function XsQuotes({ look, heading, quotes, prevLabel, nextLabel }: { look
           </>
         ) : null}
         {quotes.map((item, index) => (
-          <figure key={item.key} className="xs-quotes__item" data-xs-item={`items.${item.key}`} data-active={index === active ? "" : undefined} aria-hidden={index === active ? undefined : true}>
+          <figure key={item.key} className="xs-quotes__item" data-xs-item={`items.${item.key}`} {...item.own} data-active={index === active ? "" : undefined} aria-hidden={index === active ? undefined : true}>
             <blockquote>
               <p>“{item.quote}”</p>
             </blockquote>

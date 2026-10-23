@@ -10,6 +10,7 @@ import { EmptyBlock } from "../commerce";
 import { type Props, collectionProducts, items, linkOf, num, pricing, safeUrl, str } from "../showcase/shared";
 import { XsCountdown, XsNewsletterForm, XsQuotes } from "../lazy";
 import { listed } from "./listed";
+import { xsItemOwn } from "./own";
 import type { XsQuote } from "./XsQuotes";
 
 /**
@@ -153,7 +154,7 @@ export function XsFeaturesElement({ props, look }: XsHomeProps): ReactNode {
               // Its own icon (the template's, or the merchant's upload) before the look's drawing (under public/xs/<look>/).
               const own = safeUrl(str(feature, "image"));
               return (
-                <div key={at} className="xs-features__item" data-xs-item={`items.${at}`}>
+                <div key={at} className="xs-features__item" data-xs-item={`items.${at}`} {...xsItemOwn(feature)}>
                   <span className="xs-features__icon">
                     <XsPicture src={own ?? `/xs/${look}/${FEATURE_ICONS.has(icon) ? icon : "truck"}.svg`} alt="" width={40} height={40} pic={`items.${at}.image`} size={pictureSize(feature, "image")} />
                   </span>
@@ -251,7 +252,15 @@ export async function XsMinisElement({ props, look, workspaceId, locale, editabl
 /** `xs_quotes` — the merchant's own customers' words, one at a time. */
 export function XsQuotesElement({ props, look, locale }: XsHomeProps): ReactNode {
   const quotes: XsQuote[] = listed(props, "items", 8)
-    .map(({ item, at }) => ({ key: `${at}`, quote: str(item, "quote"), name: str(item, "name"), role: str(item, "role"), image: safeUrl(str(item, "image")), size: pictureSize(item, "image") }))
+    .map(({ item, at }) => ({
+      key: `${at}`,
+      quote: str(item, "quote"),
+      name: str(item, "name"),
+      role: str(item, "role"),
+      image: safeUrl(str(item, "image")),
+      size: pictureSize(item, "image"),
+      own: xsItemOwn(item),
+    }))
     .filter((item) => item.quote);
   if (quotes.length === 0) return null;
   return <XsQuotes look={look} heading={str(props, "heading")} quotes={quotes} prevLabel={locale === "ar" ? "السابق" : "Previous"} nextLabel={locale === "ar" ? "التالي" : "Next"} />;
@@ -347,7 +356,7 @@ export function XsPostsElement({ props, look }: XsHomeProps): ReactNode {
           const title = str(post, "title");
           const more = str(post, "linkLabel");
           return (
-            <article key={at} className="xs-posts__item" data-xs-item={`items.${at}`}>
+            <article key={at} className="xs-posts__item" data-xs-item={`items.${at}`} {...xsItemOwn(post)}>
               {image ? (
                 <div className="xs-posts__pic">
                   <XsPicture src={image} alt={title} box={xsBox(image)} pic={`items.${at}.image`} size={pictureSize(post, "image")} />

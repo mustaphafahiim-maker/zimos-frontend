@@ -13,7 +13,7 @@ import { ShellLink } from "@/components/ShellLink";
 import { StoreImage } from "@/components/StoreImage";
 import { StoreLink } from "@/components/StoreRoute";
 import { getDictionary, type Locale } from "@/lib/i18n";
-import type { ResolvedShellLink } from "@/lib/storeShell";
+import { shellTextPath, type ResolvedShellLink } from "@/lib/storeShell";
 import { useStoreShell } from "@/lib/StoreShellContext";
 import { XS_LOGOS } from "@/lib/xsShell";
 import { readShopperDisplay } from "@/lib/shopperDisplay";
@@ -194,7 +194,13 @@ export function XsHeader({
               return items ? (
                 <NavDropdown key={link.key} link={link} items={items} className="xs-header__link" />
               ) : (
-                <ShellLink key={link.key} link={link} className="xs-header__link" />
+                <ShellLink
+                  key={link.key}
+                  link={link}
+                  className="xs-header__link"
+                  // The merchant's own links, or the built-in "home" the editor starts their list from.
+                  shellText={shellTextPath("header.menu", link, !header.menu && link.key === "home" ? 0 : undefined)}
+                />
               );
             })}
           </span>

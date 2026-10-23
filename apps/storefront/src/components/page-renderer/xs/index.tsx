@@ -12,7 +12,7 @@ import { xsBox } from "@/lib/xsImages";
 import { listed } from "./listed";
 import { XsFeaturesElement, XsGalleryElement, XsHeroElement, XsMinisElement, XsNewsletterElement, XsPostsElement, XsQuotesElement, XsShowcaseElement, XsSplitElement, type XsHomeProps } from "./home";
 import { XsContactElement, XsStoryElement, XsTeamElement, XsTitleElement, XsVideoElement, type XsPageProps } from "./pages";
-import { XsOwn } from "./own";
+import { XsOwn, xsItemOwn } from "./own";
 import type { XsGridTab } from "./XsProductGrid";
 import { xsCopy } from "./copy";
 import type { XsSlide } from "./XsSlider";
@@ -79,6 +79,7 @@ function XsSliderElement({ props, locale, editable, eager }: ElementProps) {
       buttonLabel: str(slide, "buttonLabel"),
       buttonHref: linkOf(slide, "buttonHref"),
       focal: xsFocal(slide.imagePosition),
+      own: xsItemOwn(slide),
     }))
     .filter((slide) => slide.image);
   if (!look || slides.length === 0) return <Empty editable={editable} message={t.noSlides} />;
@@ -104,6 +105,7 @@ function XsBannersElement({ props, locale, editable, eager }: ElementProps) {
       text: str(item, "text"),
       linkLabel: str(item, "linkLabel"),
       href: linkOf(item, "href"),
+      own: xsItemOwn(item),
     }))
     .filter((banner) => banner.image);
   if (!look || banners.length === 0) return <Empty editable={editable} message={t.noBanners} />;
@@ -146,11 +148,11 @@ function XsBannersElement({ props, locale, editable, eager }: ElementProps) {
             </>
           );
           return banner.href ? (
-            <StoreLink key={banner.at} href={banner.href} className="xs-banners__item" data-xs-item={`items.${banner.at}`}>
+            <StoreLink key={banner.at} href={banner.href} className="xs-banners__item" data-xs-item={`items.${banner.at}`} {...banner.own}>
               {body}
             </StoreLink>
           ) : (
-            <div key={banner.at} className="xs-banners__item" data-xs-item={`items.${banner.at}`}>
+            <div key={banner.at} className="xs-banners__item" data-xs-item={`items.${banner.at}`} {...banner.own}>
               {body}
             </div>
           );

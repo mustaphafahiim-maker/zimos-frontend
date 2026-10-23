@@ -566,3 +566,45 @@ export function starterFooterGroups(title: string): FooterGroupLook[] {
 export function starterMenu(): ShellLink[] {
   return [newLink("home")];
 }
+
+/**
+ * A header or footer word edited where it stands on the page (the preview's zimos:shell-text,
+ * storefront components/preview/useShellText): `path` names it — "header.menu.2.label",
+ * "footer.groups.0.title", "footer.groups.0.links.1.label" or "footer.text". A list that is
+ * still the built-in one is first made the merchant's own, from what it showed (starterMenu,
+ * starterFooterGroups with `builtInGroupTitle`), in the same order as the storefront drew it.
+ * Null: the path names nothing that is there.
+ */
+export function withShellText<T extends { header: HeaderLook; footer: FooterLook }>(
+  look: T,
+  path: string,
+  text: string,
+  builtInGroupTitle: string
+): T | null {
+  const parts = path.split(".");
+  if (parts[0] === "header" && parts[1] === "menu" && parts[3] === "label" && parts.length === 4) {
+    const i = Number(parts[2]);
+    const menu = [...(look.header.menu ?? starterMenu())];
+    if (!Number.isInteger(i) || !menu[i]) return null;
+    menu[i] = { ...menu[i], label: text.slice(0, LINK_LABEL_MAX) };
+    return { ...look, header: { ...look.header, menu } };
+  }
+  if (path === "footer.text") return { ...look, footer: { ...look.footer, text: text.slice(0, FOOTER_TEXT_MAX) } };
+  if (parts[0] === "footer" && parts[1] === "groups") {
+    const g = Number(parts[2]);
+    const groups = (look.footer.groups ?? starterFooterGroups(builtInGroupTitle)).map((group) => ({ ...group, links: [...group.links] }));
+    const group = Number.isInteger(g) ? groups[g] : undefined;
+    if (!group) return null;
+    if (parts[3] === "title" && parts.length === 4) {
+      group.title = text.slice(0, LINK_LABEL_MAX);
+    } else if (parts[3] === "links" && parts[5] === "label" && parts.length === 6) {
+      const l = Number(parts[4]);
+      if (!Number.isInteger(l) || !group.links[l]) return null;
+      group.links[l] = { ...group.links[l], label: text.slice(0, LINK_LABEL_MAX) };
+    } else {
+      return null;
+    }
+    return { ...look, footer: { ...look.footer, groups } };
+  }
+  return null;
+}

@@ -25,6 +25,7 @@ export function ColorWell({
   onChange,
   swatches,
   swatchesOpen = false,
+  unset,
   children,
 }: {
   label: string;
@@ -38,6 +39,11 @@ export function ColorWell({
   swatches?: readonly string[];
   /** Start with the ready colours showing. */
   swatchesOpen?: boolean;
+  /**
+   * Nothing chosen is shown as nothing — an empty code with these words in it and a crossed-out well —
+   * instead of as `fallback`, for a colour whose "not set" is not one colour ("the template's").
+   */
+  unset?: string;
   /** Under the hint: a link to reset, a contrast note. */
   children?: ReactNode;
 }) {
@@ -47,7 +53,8 @@ export function ColorWell({
   const [draft, setDraft] = useState<string | null>(null);
   const [open, setOpen] = useState(swatchesOpen);
 
-  const shown = draft ?? value ?? fallback;
+  const blank = unset !== undefined && draft === null && value === null;
+  const shown = draft ?? value ?? (blank ? "" : fallback);
   const valid = normalizeHex(shown);
   // The native picker cannot show a half-typed code: it stays on the last whole colour.
   const well = valid ?? normalizeHex(value ?? fallback) ?? "#000000";
@@ -87,12 +94,13 @@ export function ColorWell({
           spellCheck={false}
           dir="ltr"
           aria-label={t.colorCode(label)}
-          aria-invalid={valid ? undefined : true}
-          className="h-9 w-[6.25rem] shrink-0 px-2 font-mono text-sm uppercase"
+          placeholder={blank ? unset : undefined}
+          aria-invalid={valid || blank ? undefined : true}
+          className="h-9 w-[6.25rem] shrink-0 px-2 font-mono text-sm uppercase placeholder:font-sans placeholder:text-xs placeholder:normal-case"
         />
         <span
           className="zimos-look-well relative block size-9 shrink-0 overflow-hidden rounded-full ring-1 ring-line-strong has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary pointer-coarse:size-11"
-          style={{ backgroundColor: well }}
+          style={blank ? { backgroundImage: UNSET_WELL } : { backgroundColor: well }}
         >
           <input
             id={id}
@@ -122,7 +130,7 @@ export function ColorWell({
         <SwatchRow id={swatchesId} colors={swatches} value={valid} label={t.colorSwatches(label)} onPick={pick} />
       )}
 
-      {valid ? (
+      {valid || blank ? (
         hint && <p className="text-xs text-ink-soft">{hint}</p>
       ) : (
         <p className="text-xs font-medium text-danger">
@@ -136,6 +144,9 @@ export function ColorWell({
     </div>
   );
 }
+
+/** A well with nothing chosen: a thin line across it, as "none" is drawn. */
+const UNSET_WELL = "linear-gradient(135deg, transparent calc(50% - 1px), var(--color-line-strong, #a3a3a3) calc(50% - 1px), var(--color-line-strong, #a3a3a3) calc(50% + 1px), transparent calc(50% + 1px))";
 
 /** Ready colours as round dots on one line (it scrolls sideways when the panel is narrow). */
 export function SwatchRow({

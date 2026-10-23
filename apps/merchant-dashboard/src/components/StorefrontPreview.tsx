@@ -125,6 +125,8 @@ export interface PreviewCanvas {
   onCanvasKey?: (key: CanvasKey) => void;
   /** The logo of the picked header or footer was clicked: change it. */
   onPickLogo?: (part: "header" | "footer") => void;
+  /** A header or footer word was edited where it stands (`path`: where it is kept, storeShell withShellText). */
+  onShellText?: (path: string, text: string) => void;
   /**
    * The imported templates' tools on the page — resizing a band's pictures and
    * a logo, moving a header part, a ground picture's focus, a band's items —
@@ -842,6 +844,9 @@ export function StorefrontPreview({
           break;
         case "zimos:pick-logo":
           canvasRef.current?.onPickLogo?.(message.part);
+          break;
+        case "zimos:shell-text":
+          canvasRef.current?.onShellText?.(message.path, message.text);
           break;
         case "zimos:pick-image":
           handlers.onPickImage?.({ sectionId: message.sectionId, elementId: message.elementId, field: message.field, src: message.src, nth: message.nth });

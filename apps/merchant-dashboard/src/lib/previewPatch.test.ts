@@ -34,6 +34,16 @@ describe("patches for an imported template's band", () => {
     expect(patchKind(ops!)).toBe("picture");
   });
 
+  it("sends one entry's own colours, all of them, by its place in the list", () => {
+    const coloured = { ...BAND, items: [{ ...BAND.items[0], textColor: "#222222" }] };
+    const next = { ...BAND, items: [{ ...BAND.items[0], textColor: "#222222", titleColor: "#ff0000" }] };
+    const ops = diffTreePatch(tree("xs_banners", coloured), tree("xs_banners", next));
+    expect(ops).toEqual([{ elementId: "e1", itemOwn: { "items.0": { textColor: "#222222", titleColor: "#ff0000" } } }]);
+    expect(patchKind(ops!)).toBe("colour");
+    // Taken away: the entry is sent with what is left.
+    expect(diffTreePatch(tree("xs_banners", coloured), tree("xs_banners", BAND))).toEqual([{ elementId: "e1", itemOwn: { "items.0": {} } }]);
+  });
+
   it("renders for anything a patch cannot show: a link, a look, a list that grows, emptied words", () => {
     expect(diffTreePatch(tree("xs_banners", BAND), tree("xs_banners", { ...BAND, items: [{ ...BAND.items[0], href: "/tees" }] }))).toBeNull();
     expect(diffTreePatch(tree("xs_banners", BAND), tree("xs_banners", { ...BAND, look: "06" }))).toBeNull();

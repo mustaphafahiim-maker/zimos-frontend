@@ -9,6 +9,8 @@ import { ProductPickerField } from "./ProductPickerField";
 import { VideoField } from "./VideoField";
 import { ChoiceField, NumberField } from "./inspector/controls";
 import { BilingualField, LinkTargetNote, isLinkKey, pairByLanguage, type LanguageSlot } from "./inspector/fields";
+import { shownPicture } from "@/lib/storefrontUrl";
+import { ColorWell } from "./theme/ColorWell";
 import { useInspectorEnv } from "./inspector/env";
 import { inspectorNumber, inspectorUi } from "./inspector/strings";
 
@@ -56,7 +58,10 @@ export type ItemSubField =
     }
   // A background video from the media library (VideoField.tsx). Its size in bytes is kept under `sizeKey`;
   // `posterKey` names the entry's picture that stands in for the video.
-  | { key: string; label: string; labelAr: string; kind: "video"; sizeKey: string; posterKey: string; hint?: string; hintAr?: string };
+  | { key: string; label: string; labelAr: string; kind: "video"; sizeKey: string; posterKey: string; hint?: string; hintAr?: string }
+  // A colour of this entry alone, as #rrggbb; absent keeps the section's. Every colour of an entry is
+  // shown together, folded under "Its own colours" at the end of its card.
+  | { key: string; label: string; labelAr: string; kind: "color" };
 
 type Item = Record<string, unknown>;
 
@@ -69,6 +74,7 @@ function asItems(raw: unknown): Item[] {
     : [];
 }
 
+const HEX = /^#[0-9a-f]{6}$/i;
 const str = (v: unknown) => (typeof v === "string" ? v : typeof v === "number" ? String(v) : "");
 const lines = (v: unknown) => (Array.isArray(v) ? v.filter((x) => typeof x === "string").join("\n") : "");
 /** Whether a value holds anything a shopper would see. */
@@ -128,7 +134,11 @@ export function ItemListField({
     listRef.current?.querySelector(`[data-item-index="${focusIndex}"]`)?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [focusNonce, focusIndex]);
 
-  const paired = pairByLanguage(fields, PAIRABLE);
+  const paired = pairByLanguage(
+    fields.filter((f) => f.kind !== "color"),
+    PAIRABLE
+  );
+  const colours = fields.filter((f) => f.kind === "color");
   const pictureKey = fields.find((f) => f.kind === "image")?.key;
 
   // `undefined` takes a key out of the entry instead of storing an empty value.
@@ -201,6 +211,19 @@ export function ItemListField({
           // The address and the size travel together: a new video never keeps the old one's size.
           onChange={(next) => patchMany(i, { [field.key]: next?.url, [field.sizeKey]: next?.bytes ?? undefined })}
         />
+      );
+    }
+    if (field.kind === "color") {
+      const stored = item[field.key];
+      const chosen = typeof stored === "string" && HEX.test(stored) ? stored : null;
+      return (
+        <ColorWell key={field.key} label={name} value={chosen} fallback="#ffffff" unset={t.itemColourUnset} onChange={(hex) => patch(i, field.key, hex)}>
+          {chosen ? (
+            <button type="button" className="text-xs text-ink-soft underline underline-offset-2 hover:text-ink" onClick={() => patch(i, field.key, undefined)}>
+              {t.itemColourReset}
+            </button>
+          ) : null}
+        </ColorWell>
       );
     }
     if (field.kind === "number") {
@@ -361,7 +384,7 @@ export function ItemListField({
                 >
                   {picture && (
                     <img
-                      src={picture}
+                      src={shownPicture(picture)}
                       alt=""
                       loading="lazy"
                       decoding="async"
@@ -435,6 +458,11 @@ export function ItemListField({
                         control(i, item, field)
                       )
                     )}
+                    {colours.length > 0 && (
+                      <OwnColours title={t.itemColours} hint={t.itemColoursHint} chosen={colours.some((f) => typeof item[f.key] === "string")}>
+                        {colours.map((field) => control(i, item, field))}
+                      </OwnColours>
+                    )}
                   </div>
                 )}
               </li>
@@ -459,5 +487,26 @@ export function ItemListField({
       {items.length >= max && <p className="text-xs leading-5 text-ink-soft">{t.itemsFull(inspectorNumber(max, locale))}</p>}
       {hint && <p className="text-xs leading-5 text-ink-soft">{hint}</p>}
     </div>
+  );
+}
+
+/**
+ * An entry's own colours, folded at the end of its card. It starts open while
+ * one of them is chosen, so a coloured entry shows why it looks different, and
+ * then stays as the merchant leaves it.
+ */
+function OwnColours({ title, hint, chosen, children }: { title: string; hint: string; chosen: boolean; children: ReactNode }) {
+  const [open, setOpen] = useState(chosen);
+  return (
+    <details data-slot="item-colours" className="group rounded-[0.875rem] ring-1 ring-line" open={open} onToggle={(e) => setOpen(e.currentTarget.open)}>
+      <summary className="flex min-h-10 cursor-pointer list-none items-center gap-2 px-3 text-sm font-medium text-ink [&::-webkit-details-marker]:hidden">
+        <span className="flex-1">{title}</span>
+        <IconCaretDown className="size-4 shrink-0 text-ink-soft -rotate-90 group-open:rotate-0 rtl:rotate-90 rtl:group-open:rotate-0" aria-hidden />
+      </summary>
+      <div className="space-y-3 px-3 pb-3">
+        <p className="text-xs leading-5 text-ink-soft">{hint}</p>
+        {children}
+      </div>
+    </details>
   );
 }

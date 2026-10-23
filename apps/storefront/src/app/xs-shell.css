@@ -444,6 +444,35 @@
   --xs-badge: var(--xs-own-accent);
   --xs-grad: var(--xs-own-accent);
 }
+/*
+ * One entry of a band's list restyled on its own (own.tsx xsItemOwn): a
+ * slide's, a banner's or a card's title, words and button. They win over the
+ * band's own colours and the look's, which may colour one slide by itself.
+ * The title's colour goes on the title only — not on the look's "ink", which
+ * its link beside it is often drawn in too.
+ */
+[data-xs-own-item~="title"] :is(h1, h2, h3, h4, h5, h1 a, h2 a, h3 a, h4 a, .xs-banners__title, .xs-quotes__name) {
+  color: var(--xs-item-title) !important;
+}
+[data-xs-own-item~="text"] {
+  --xs-ink-soft: var(--xs-item-text) !important;
+  --xs-muted: var(--xs-item-text) !important;
+}
+[data-xs-own-item~="text"] :is(p, li, blockquote, cite, .xs-slider__eyebrow, .xs-banners__info, .xs-posts__meta, .xs-team__role, .xs-quotes__role) {
+  color: var(--xs-item-text) !important;
+}
+[data-xs-own-item~="button"] {
+  --xs-accent: var(--xs-item-button) !important;
+  --xs-brand: var(--xs-item-button) !important;
+  --xs-button: var(--xs-item-button) !important;
+  --xs-highlight: var(--xs-item-button) !important;
+  --xs-badge: var(--xs-item-button) !important;
+  --xs-grad: var(--xs-item-button) !important;
+}
+/* A button drawn as a word with a line under it takes the look's ink: on the button itself, that ink is its colour. */
+[data-xs-own-item~="button"] :is(.xs-slider__button, .xs-banners__link, .xs-posts__more) {
+  --xs-ink: var(--xs-item-button) !important;
+}
 /* The band's ground: a flat colour, in place of the look's colour or photograph. */
 .xs-own[data-own-ground] > [data-xs-look] {
   --xs-ground: var(--xs-own-ground);

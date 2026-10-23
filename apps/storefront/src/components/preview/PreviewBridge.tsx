@@ -23,6 +23,7 @@ import { EL_ATTR, TYPE_ATTR, elementNode, elementRect, imageFieldOf, isRtl, sect
 import { applyPatch, readPatch } from "./canvasPatch";
 import { useCanvasDrag } from "./useCanvasDrag";
 import { deepTextNodes, useCanvasText } from "./useCanvasText";
+import { useShellText } from "./useShellText";
 
 /**
  * The storefront half of the website editor's canvas. Rendered only by the
@@ -54,6 +55,7 @@ import { deepTextNodes, useCanvasText } from "./useCanvasText";
  *   { type: "zimos:canvas-step", step }                   one arrow-key press on a canvas handle
  *   { type: "zimos:color-mode", mode }                    the page went light or dark (the in-page switch, or the OS)
  *   { type: "zimos:edit-text", elementId, text, was?, nth? } a double-click text edit was committed (useCanvasText.ts);
+ *   { type: "zimos:shell-text", path, text }  a header or footer word edited in place (useShellText.ts);
  *                                                          `was`/`nth` name one word-run of a many-worded element
  *   { type: "zimos:key", key }                            an editor key pressed while this page has the focus
  *                                                          (copy, paste, duplicate, undo, redo, delete)
@@ -548,6 +550,8 @@ export function PreviewBridge({
 
   // X-ray outlines and double-click text editing (useCanvasText.ts).
   useCanvasText({ editable, xray, inlineText, deepText, hint: strings.editText, post });
+  // The header's and footer's own words, the same way (useShellText.ts).
+  useShellText({ editable, hint: strings.editText, post });
 
   // Dragging and resizing on the page itself (useCanvasDrag.ts).
   const drag = useCanvasDrag({ post, parentOrigin, focusKey: `zimos-preview-focus:${token}` });

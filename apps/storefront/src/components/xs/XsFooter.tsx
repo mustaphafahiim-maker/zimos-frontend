@@ -12,7 +12,7 @@ import { SocialLinks } from "@/components/SocialLinks";
 import { StoreLink } from "@/components/StoreRoute";
 import { pageAndPolicyGroups } from "@/lib/footerLinks";
 import { getDictionary, type Locale } from "@/lib/i18n";
-import { resolveShellLinks, type ResolvedShellLink } from "@/lib/storeShell";
+import { resolveShellLinks, shellTextPath, type ResolvedShellLink } from "@/lib/storeShell";
 import { useStoreShell } from "@/lib/StoreShellContext";
 import { XS_CREDITS, XS_LOGOS } from "@/lib/xsShell";
 
@@ -80,19 +80,24 @@ export function XsFooter({ store, locale, year, look }: { store: StorefrontMeta;
   const sizeCss = footerSizeCss(footer.sizes) + footerWidthCss(columns, pageGroups.length);
   const ar = locale === "ar";
 
-  const linkList = (links: ResolvedShellLink[]) => (
+  // `list`: where the links' words are kept (lib/storeShell shellTextPath); `builtIn`: the built-in
+  // group, which the editor starts the merchant's own from, in the same order.
+  const linkList = (links: ResolvedShellLink[], list?: string, builtIn = false) => (
     <ul>
-      {links.map((item) => (
-        <li key={item.key}>
-          {item.external ? (
-            <ShellLink link={item} className="xs-footer__link" />
-          ) : (
-            <StoreLink href={item.href} className="xs-footer__link">
-              {item.label}
-            </StoreLink>
-          )}
-        </li>
-      ))}
+      {links.map((item, i) => {
+        const shellText = list ? shellTextPath(list, item, builtIn ? i : undefined) : undefined;
+        return (
+          <li key={item.key}>
+            {item.external ? (
+              <ShellLink link={item} className="xs-footer__link" shellText={shellText} />
+            ) : (
+              <StoreLink href={item.href} className="xs-footer__link" data-shell-text={shellText}>
+                {item.label}
+              </StoreLink>
+            )}
+          </li>
+        );
+      })}
     </ul>
   );
 
@@ -106,8 +111,12 @@ export function XsFooter({ store, locale, year, look }: { store: StorefrontMeta;
         if (!group) return null;
         return (
           <nav key={col.id} className="xs-footer__col" aria-label={group.title || t.footer.links} data-xs-col={col.id} style={style}>
-            {group.title && <h4 className="xs-footer__title">{group.title}</h4>}
-            {linkList(group.links)}
+            {group.title && (
+              <h4 className="xs-footer__title" data-shell-text={`footer.groups.${col.at}.title`}>
+                {group.title}
+              </h4>
+            )}
+            {linkList(group.links, `footer.groups.${col.at}.links`, !footer.groups)}
           </nav>
         );
       }
@@ -142,7 +151,11 @@ export function XsFooter({ store, locale, year, look }: { store: StorefrontMeta;
                 </span>
               )}
             </h4>
-            {about && <p className="xs-footer__text">{about}</p>}
+            {about && (
+              <p className="xs-footer__text" data-shell-text="footer.text">
+                {about}
+              </p>
+            )}
             {Object.keys(social).length > 0 && (
               <div className="xs-footer__social">
                 <SocialLinks links={social} />

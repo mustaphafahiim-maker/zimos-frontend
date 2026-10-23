@@ -8,6 +8,7 @@ import { xsBox } from "@/lib/xsImages";
 import { XsBackgroundPreload, XsPicture, pictureSize } from "@/components/xs/XsPicture";
 import { XsContactForm } from "../lazy";
 import { listed } from "./listed";
+import { xsItemOwn } from "./own";
 
 /**
  * The bands an imported template's inner pages are made of (About, Contact):
@@ -56,7 +57,7 @@ export function XsStoryElement({ props, look }: XsPageProps): ReactNode {
           .map((p) => p.trim())
           .filter(Boolean);
         return (
-          <div key={at} className="xs-story__part" data-flip={index % 2 === 1 ? "" : undefined} data-xs-item={`items.${at}`}>
+          <div key={at} className="xs-story__part" data-flip={index % 2 === 1 ? "" : undefined} data-xs-item={`items.${at}`} {...xsItemOwn(part)}>
             <div className="xs-story__text">
               {str(part, "title") ? <h3 className="xs-story__title">{str(part, "title")}</h3> : null}
               {paragraphs.map((paragraph, i) => (
@@ -166,7 +167,7 @@ export function XsTeamElement({ props, look }: XsPageProps): ReactNode {
         {people.map(({ item: person, at }) => {
           const image = safeUrl(str(person, "image"));
           return (
-            <div key={at} className="xs-team__person" data-xs-item={`items.${at}`}>
+            <div key={at} className="xs-team__person" data-xs-item={`items.${at}`} {...xsItemOwn(person)}>
               {image ? <XsPicture src={image} alt={str(person, "name")} box={xsBox(image)} pic={`items.${at}.image`} size={pictureSize(person, "image")} /> : null}
               {str(person, "name") ? <h3>{str(person, "name")}</h3> : null}
               {str(person, "role") ? <span className="xs-team__role">{str(person, "role")}</span> : null}

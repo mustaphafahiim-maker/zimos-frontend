@@ -52,4 +52,23 @@ describe("patches on an imported template's band", () => {
     expect(document.querySelectorAll("source")).toHaveLength(0);
     expect((document.querySelector("[data-xs-bg]") as HTMLElement).style.backgroundImage).toContain("/xs/05/bg2.jpg");
   });
+
+  it("colours one entry by itself, and takes its colours away again", () => {
+    page(`<div data-zimos-el="e1"><div class="xs-slider" data-xs-look="05">
+      <div data-xs-item="slides.0" style="background-image:url(/a.jpg)"><h2>One</h2></div>
+      <div data-xs-item="slides.1"><h2>Two</h2></div>
+    </div></div>`);
+    const [op] = readPatch([{ elementId: "e1", itemOwn: { "slides.0": { titleColor: "#FF0000", buttonColor: "red", onclick: "x" }, "../x": { titleColor: "#00ff00" } } }]);
+    expect(op.itemOwn).toEqual({ "slides.0": { titleColor: "#FF0000", buttonColor: "red" } });
+    expect(applyPatch([op])).toBe(true);
+    const first = document.querySelector<HTMLElement>('[data-xs-item="slides.0"]')!;
+    expect(first.getAttribute("data-xs-own-item")).toBe("title");
+    expect(first.style.getPropertyValue("--xs-item-title")).toBe("#ff0000");
+    expect(first.style.getPropertyValue("--xs-item-button")).toBe("");
+    expect(first.style.backgroundImage).toContain("/a.jpg");
+    expect(document.querySelector('[data-xs-item="slides.1"]')!.hasAttribute("data-xs-own-item")).toBe(false);
+    applyPatch(readPatch([{ elementId: "e1", itemOwn: { "slides.0": {} } }]));
+    expect(first.hasAttribute("data-xs-own-item")).toBe(false);
+    expect(first.style.getPropertyValue("--xs-item-title")).toBe("");
+  });
 });
