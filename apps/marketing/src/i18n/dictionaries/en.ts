@@ -288,6 +288,7 @@ export const en: Dictionary = {
       api_access: "API access",
       staff_accounts: "Staff accounts",
       advanced_analytics: "Advanced analytics",
+      visitor_insights: "Visitor insights",
       remove_branding: "Remove platform branding",
       priority_support: "Priority support",
     },

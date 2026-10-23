@@ -33,7 +33,7 @@ export function SiteAnalytics() {
       if (!cta) return;
       const current = siteIds();
       if (cta === "register" && current) anchor.href = withSiteSession(anchor.href, current.sessionId);
-      sendSiteEvent("cta_click");
+      sendSiteEvent("cta_click", window.location.pathname, cta);
     };
     document.addEventListener("click", onClick, true);
     document.addEventListener("auxclick", onClick, true);

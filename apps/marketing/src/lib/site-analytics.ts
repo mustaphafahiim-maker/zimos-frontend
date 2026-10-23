@@ -12,6 +12,14 @@ import { API_BASE_URL, DASHBOARD_URL } from "@/lib/urls";
 
 export const SITE_ANALYTICS_ENABLED = process.env.NEXT_PUBLIC_SITE_ANALYTICS_ENABLED === "true";
 
+/**
+ * A sign-up / sign-in click says which of the two it was (`cta`), so the
+ * console's funnel counts sign-up clicks only. Turn it on after the API's
+ * SITE_TRAFFIC_DETAILS_ENABLED: an API without it refuses the field, and the
+ * click would not be counted at all.
+ */
+export const SITE_TRAFFIC_DETAILS_ENABLED = process.env.NEXT_PUBLIC_SITE_TRAFFIC_DETAILS_ENABLED === "true";
+
 const VISITOR_KEY = "zimos.site.visitor";
 const SESSION_KEY = "zimos.site.session";
 export const PING_MS = 15_000;
@@ -28,6 +36,7 @@ type Payload = {
   utmSource?: string;
   utmMedium?: string;
   utmCampaign?: string;
+  cta?: "register" | "login";
 };
 
 function randomId(): string {
@@ -75,10 +84,11 @@ function localeOf(path: string): "ar" | "en" | undefined {
 
 let firstViewSent = false;
 
-export function sendSiteEvent(event: SiteEvent, path = window.location.pathname): void {
+export function sendSiteEvent(event: SiteEvent, path = window.location.pathname, cta?: "register" | "login"): void {
   const current = siteIds();
   if (!current) return;
   const body: Payload = { ...current, event, path: clip(path, 300) || "/", locale: localeOf(path) };
+  if (event === "cta_click" && cta && SITE_TRAFFIC_DETAILS_ENABLED) body.cta = cta;
 
   // Where the visit came from goes with the session's first view only.
   if (event === "view" && !firstViewSent) {
