@@ -2608,6 +2608,8 @@ export type PlanFeatureKey =
   | "api_access"
   | "staff_accounts"
   | "advanced_analytics"
+  // On top of advanced_analytics: the Visitors section's visits, campaigns and governorates.
+  | "visitor_insights"
   | "remove_branding"
   | "priority_support";
 
