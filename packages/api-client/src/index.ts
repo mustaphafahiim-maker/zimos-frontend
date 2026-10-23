@@ -39,6 +39,8 @@ export * from "./endpoints/funnels";
 export * from "./endpoints/funnelRuntime";
 // API keys and outbound webhooks (Settings → Developers).
 export * from "./endpoints/developers";
+// The store's plan features, for a screen that locks itself before a write is refused.
+export * from "./endpoints/planFeatures";
 export * from "./endpoints/webhookExtras";
 // Store design and settings: purchase form builder, thank-you page.
 export * from "./endpoints/storeDesign";

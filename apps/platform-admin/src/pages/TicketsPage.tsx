@@ -7,12 +7,12 @@ import { PageHeader } from "@/components/PageHeader";
 import { DataState, EmptyBlock } from "@/components/DataState";
 import { FilterChips, NativeSelect, SearchInput } from "@/components/forms";
 import { Panel, Td, Th } from "@/components/Panel";
-import { Status } from "@/components/StatusBadge";
+import { Status, StatusBadge } from "@/components/StatusBadge";
 import { useAsync } from "@/lib/useAsync";
 import * as adminApi from "@/lib/adminApi";
 import { formatDateTime, formatRelative } from "@/lib/format";
 import { Pager } from "@/pages/BlocklistPage";
-import { PRIORITY_LABEL, STATUS_LABEL } from "@/lib/tickets";
+import { PRIORITY_LABEL, STATUS_LABEL, priorityBadge } from "@/lib/tickets";
 
 type StatusFilter = "all" | SupportTicketStatus;
 
@@ -107,9 +107,16 @@ export function TicketsPage() {
                 {tickets.map((t) => (
                   <TableRow key={t.id}>
                     <Td className="max-w-96">
-                      <Link to={`/tickets/${t.id}`} className="block truncate font-medium text-ink hover:text-primary">
-                        {t.subject}
-                      </Link>
+                      <span className="flex items-center gap-2">
+                        <Link to={`/tickets/${t.id}`} className="block min-w-0 truncate font-medium text-ink hover:text-primary">
+                          {t.subject}
+                        </Link>
+                        {(() => {
+                          // Urgent and high tickets sit at the top of the queue and say so.
+                          const badge = priorityBadge(t.priority);
+                          return badge ? <StatusBadge tone={badge.tone}>{badge.label}</StatusBadge> : null;
+                        })()}
+                      </span>
                       <span className="text-xs text-ink-soft">
                         {t.category} · {t.messageCount ?? 0} message{t.messageCount === 1 ? "" : "s"} · opened by{" "}
                         {t.createdBy ?? "a deleted user"}

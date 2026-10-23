@@ -20,10 +20,12 @@ export function PoweredByZimos({ label }: { label: string }) {
 }
 
 /**
- * Whether the store's plan removes ZIMOS from its pages (Plan.features.
- * remove_branding, sent as `removeBranding` with the store). Every place that
- * shows the mark asks this: the footers, the funnel footer, and the headers
- * that fall back to the ZIMOS logo when the store has none.
+ * Whether ZIMOS is hidden from the store's pages: the merchant's "Hide ZIMOS
+ * branding" setting while the plan has remove_branding, worked out by the
+ * backend (storefront/platformBranding.js) and sent as `removeBranding` with
+ * the store. Every place that shows the mark asks this: the footers, the
+ * funnel footer, the headers that fall back to the ZIMOS logo when the store
+ * has none, and the web app manifest's fallback icon.
  */
 export function brandingRemoved(store: unknown): boolean {
   return Boolean(store && (store as { removeBranding?: unknown }).removeBranding === true);

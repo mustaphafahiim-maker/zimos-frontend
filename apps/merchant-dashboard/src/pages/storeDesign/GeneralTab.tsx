@@ -7,9 +7,11 @@ import {
 } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
+import { usePlanFeatures } from "@/lib/usePlanFeatures";
 import { useT, type Messages } from "@/i18n/LocaleContext";
 import { StoreAppSection } from "./StoreAppSection";
 import { DataState } from "@/components/DataState";
+import { PlanFeatureNotice } from "@/components/PlanFeatureNotice";
 import { Section } from "@/components/Section";
 import { Field, TextField } from "@/components/Field";
 import { Select } from "@/components/Select";
@@ -56,6 +58,12 @@ const STRINGS = {
     whatsappPhoneHint: "With the country code, digits only — for example 201001234567.",
     whatsappMessage: "Opening message",
     whatsappMessageHint: "What the shopper's chat starts with. Optional.",
+    branding: "ZIMOS branding",
+    brandingDescription:
+      "The small “Powered by ZIMOS” line in your store's footer, and the ZIMOS mark shown where your store has no logo.",
+    hideBranding: "Hide ZIMOS branding",
+    hideBrandingHint:
+      "Your emails to shoppers are then sent under your store's name too. In effect only while your plan includes it: if your plan changes, the branding shows again until it does.",
     saved: "General settings saved.",
   },
   ar: {
@@ -93,6 +101,11 @@ const STRINGS = {
     whatsappPhoneHint: "بكود الدولة وأرقام فقط — مثال 201001234567.",
     whatsappMessage: "رسالة البداية",
     whatsappMessageHint: "ما تبدأ به محادثة المشتري. اختياري.",
+    branding: "شعار ZIMOS",
+    brandingDescription: "سطر «مدعوم من ZIMOS» الصغير في فوتر متجرك، وعلامة ZIMOS التي تظهر حيث لا يوجد شعار لمتجرك.",
+    hideBranding: "إخفاء شعار ZIMOS",
+    hideBrandingHint:
+      "تُرسل رسائلك الإلكترونية إلى المشترين باسم متجرك أيضًا. يسري فقط ما دامت خطتك تشمله: إذا تغيّرت خطتك يظهر الشعار من جديد حتى تشمله.",
     saved: "تم حفظ الإعدادات العامة.",
   },
 } satisfies Messages;
@@ -107,6 +120,10 @@ export function GeneralTab() {
   );
   const { draft, setDraft, editable, saving } = editor;
   const locked = !editable || saving;
+  // "Hide ZIMOS branding" is saved on any plan but only works with remove_branding;
+  // without it the switch shows what is stored and can't be flipped.
+  const plan = usePlanFeatures();
+  const brandingHeld = plan.held("remove_branding");
   const setLink = (key: SocialLinkKey, value: string) =>
     setDraft((prev) => ({ ...prev, social_links: { ...prev.social_links, [key]: value } }));
   const setWhatsapp = (patch: Partial<GeneralStoreSettings["floating_whatsapp"]>) =>
@@ -194,6 +211,17 @@ export function GeneralTab() {
               )}
             </Field>
           </div>
+        </Section>
+
+        <Section title={t.branding} description={t.brandingDescription}>
+          <ToggleRow
+            label={t.hideBranding}
+            hint={t.hideBrandingHint}
+            checked={draft.hide_platform_branding}
+            disabled={locked || !brandingHeld}
+            onChange={(hide_platform_branding) => setDraft((prev) => ({ ...prev, hide_platform_branding }))}
+          />
+          {!brandingHeld && <PlanFeatureNotice feature="remove_branding" className="mt-3" />}
         </Section>
 
         <SettingsFormFooter

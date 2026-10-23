@@ -1,10 +1,10 @@
 import type { ReactNode } from "react";
-import { Link } from "react-router-dom";
 import { apiErrorCode } from "@store-builder/api-client";
 import { Alert, Button, Spinner, cn } from "@store-builder/ui";
 import { isPermissionError } from "@/lib/errors";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { useT, type Messages } from "@/i18n/LocaleContext";
+import { PlanFeatureNotice } from "./PlanFeatureNotice";
 
 const STRINGS = {
   en: {
@@ -12,14 +12,12 @@ const STRINGS = {
     loading: "Loading…",
     permission: "You don't have permission to view this. Ask an owner to update your role.",
     retry: "Try again",
-    seePlans: "See the plans",
   },
   ar: {
     empty: "لا يوجد شيء هنا بعد.",
     loading: "جارٍ التحميل…",
     permission: "ليست لديك صلاحية لعرض هذا. اطلب من المالك تحديث دورك.",
     retry: "حاول مرة أخرى",
-    seePlans: "عرض الخطط",
   },
 } satisfies Messages;
 
@@ -173,16 +171,7 @@ export function DataState({
   // The store's plan lacks this feature (PLAN_FEATURE_ENFORCEMENT): an
   // upgrade prompt, not a permission problem and nothing to retry.
   if (error && apiErrorCode(error) === "PLAN_FEATURE_REQUIRED") {
-    return (
-      <Alert variant="info" className="flex flex-col gap-3">
-        <span>{errorMessage(error)}</span>
-        <div>
-          <Button asChild size="sm" className="min-h-11">
-            <Link to="/subscription">{t.seePlans}</Link>
-          </Button>
-        </div>
-      </Alert>
-    );
+    return <PlanFeatureNotice message={errorMessage(error)} />;
   }
 
   if (error) {
