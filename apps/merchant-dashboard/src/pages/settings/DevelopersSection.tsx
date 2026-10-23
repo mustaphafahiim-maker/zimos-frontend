@@ -24,6 +24,7 @@ import {
 import { apiClient, apiBaseUrl } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
+import { usePlanFeatures } from "@/lib/usePlanFeatures";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
@@ -31,6 +32,7 @@ import { useToast } from "@/components/Toast";
 import { Modal } from "@/components/Modal";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { DataState } from "@/components/DataState";
+import { PlanFeatureNotice } from "@/components/PlanFeatureNotice";
 import { WebhookDeliveryLog, WebhookEndpointNotes, WebhookFilterField } from "./WebhookExtras";
 import { EditWebhookEndpointModal, WebhookHeadersField, WebhookHeadersNote, useWebhookHeaders } from "./WebhookEndpointFields";
 import { WEBHOOK_HEADERS_ENABLED } from "@/lib/features";
@@ -52,6 +54,11 @@ import { StatusBadge } from "@/components/StatusBadge";
  * The two secrets — a key, a signing secret — are shown exactly once, in a
  * box with a copy button, straight from the answer that created them. Nothing
  * here stores them or can show them again.
+ *
+ * Minting a key needs the plan feature api_access (the backend's
+ * apiKeys/apiKeyRoutes, while PLAN_FEATURE_ENFORCEMENT is on): without it the
+ * "New API key" button gives way to the plan notice, while the keys already
+ * minted stay listed and can still be revoked — they keep working on any plan.
  */
 const MANAGER_ROLES: ReadonlySet<string> = new Set(["owner", "workspace_manager"]);
 
@@ -311,6 +318,9 @@ function ApiKeysPanel({ t, onForbidden }: { t: T; onForbidden: () => void }) {
       throw err;
     }
   }, [workspaceId]);
+  // The plan's say on minting; listing and revoking never ask.
+  const plan = usePlanFeatures();
+  const minting = !plan.gated("api_access");
   const [creating, setCreating] = useState(false);
   const [revoking, setRevoking] = useState<ApiKeyDto | null>(null);
 
@@ -331,8 +341,11 @@ function ApiKeysPanel({ t, onForbidden }: { t: T; onForbidden: () => void }) {
             </a>
           </p>
         </div>
-        <Button onClick={() => setCreating(true)}>{t.newKey}</Button>
+        {minting && <Button onClick={() => setCreating(true)}>{t.newKey}</Button>}
       </div>
+
+      {/* Without api_access on the plan: the notice instead of the button; the keys below stay. */}
+      {!minting && <PlanFeatureNotice feature="api_access" className="mt-3" />}
 
       <div className="mt-3">
         <DataState

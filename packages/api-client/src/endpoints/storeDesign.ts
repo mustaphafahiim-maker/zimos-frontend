@@ -454,6 +454,11 @@ export interface GeneralStoreSettings {
   favicon_url: string;
   /** ISO 3166-1 alpha-2, e.g. "EG". */
   country: string;
+  /**
+   * "Hide ZIMOS branding": stored on any plan, in effect only while the store
+   * has remove_branding (backend: storefront/platformBranding.js).
+   */
+  hide_platform_branding: boolean;
   social_links: Record<SocialLinkKey, string>;
   floating_whatsapp: { enabled: boolean; phone: string; message: string };
 }
@@ -466,6 +471,7 @@ export function resolveGeneralStoreSettings(settings: unknown): GeneralStoreSett
   return {
     favicon_url: text(general.favicon_url),
     country: text(general.country),
+    hide_platform_branding: general.hide_platform_branding === true,
     social_links: Object.fromEntries(SOCIAL_LINK_KEYS.map((key) => [key, text(links[key])])) as Record<
       SocialLinkKey,
       string
@@ -483,7 +489,11 @@ export async function storeDesignSaveGeneral(
     method: "PATCH",
     body: {
       settings: {
-        general: { favicon_url: draft.favicon_url.trim() || null, country: draft.country.trim() || null },
+        general: {
+          favicon_url: draft.favicon_url.trim() || null,
+          country: draft.country.trim() || null,
+          hide_platform_branding: draft.hide_platform_branding,
+        },
         social_links: Object.fromEntries(SOCIAL_LINK_KEYS.map((key) => [key, draft.social_links[key].trim() || null])),
         floating_whatsapp: {
           enabled: draft.floating_whatsapp.enabled,

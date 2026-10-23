@@ -30,6 +30,7 @@ import {
   storefrontHolidayOf,
 } from "@store-builder/api-client";
 import { FloatingWhatsapp } from "@/components/FloatingWhatsapp";
+import { brandingRemoved } from "@/components/PoweredByZimos";
 import { StoreRouteProvider } from "@/components/StoreRoute";
 import { canonicalOrigin } from "@/lib/domains";
 import { dirFor, getDictionary, intlLocaleFor, arOrEn } from "@/lib/i18n";
@@ -92,8 +93,10 @@ export async function generateMetadata({
   const { seo, general } = storefrontGeneralMeta(store);
   const description = seo.description || store.tagline || t.meta.storeDescription(store.name);
   const ogImage = seo.ogImageUrl || store.logoUrl;
-  // The tab icon: the merchant's favicon, else the store logo, else the default (lib/storeIcons).
-  const icons = storeIcons({ faviconUrl: general.faviconUrl, logoUrl: store.logoUrl });
+  // The tab icon: the merchant's favicon, else the store logo, else the default
+  // (lib/storeIcons) — a neutral glyph rather than the ZIMOS mark while the
+  // store hides the platform branding.
+  const icons = storeIcons({ faviconUrl: general.faviconUrl, logoUrl: store.logoUrl, neutral: brandingRemoved(store) });
 
   return {
     metadataBase: new URL(canonicalOrigin(store)),

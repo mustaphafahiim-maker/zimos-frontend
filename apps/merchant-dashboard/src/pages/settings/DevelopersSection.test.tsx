@@ -24,6 +24,10 @@ function fakeBackend(routes: Record<string, (call: Call) => unknown>) {
   return calls;
 }
 
+// The plan's say on minting a key (GET /plan-features): the gate on, with or without api_access.
+const PLAN_WITH_API = { planFeatures: { features: ["api_access"], enforced: true } };
+const PLAN_WITHOUT_API = { planFeatures: { features: ["funnels"], enforced: true } };
+
 const KEY = {
   id: "key_1",
   name: "Sharks fulfilment",
@@ -66,6 +70,7 @@ describe("DevelopersSection", () => {
   it("creates a read-and-write key and shows the full key once", async () => {
     asOwner();
     const calls = fakeBackend({
+      "GET /workspaces/ws_1/plan-features": () => PLAN_WITH_API,
       "GET /workspaces/ws_1/api-keys": () => ({ apiKeys: [], scopes: ["orders:read", "orders:write"] }),
       "GET /workspaces/ws_1/webhooks": () => ({ endpoints: [], events: EVENTS, wildcard: "*" }),
       "POST /workspaces/ws_1/api-keys": () => ({ apiKey: KEY, secret: "zk_7Hq2mP9xa_SECRETSECRETSECRETSECRETSECRETSECRE" }),
@@ -90,6 +95,7 @@ describe("DevelopersSection", () => {
   it("lists keys without their secret and revokes one after confirmation", async () => {
     asOwner();
     const calls = fakeBackend({
+      "GET /workspaces/ws_1/plan-features": () => PLAN_WITH_API,
       "GET /workspaces/ws_1/api-keys": () => ({ apiKeys: [KEY], scopes: ["orders:read", "orders:write"] }),
       "GET /workspaces/ws_1/webhooks": () => ({ endpoints: [], events: EVENTS, wildcard: "*" }),
       "DELETE /workspaces/ws_1/api-keys/key_1": () => ({ apiKey: { ...KEY, revokedAt: "2026-09-29T11:00:00.000Z" } }),
@@ -109,6 +115,7 @@ describe("DevelopersSection", () => {
   it("adds an endpoint for chosen events and shows the signing secret once", async () => {
     asOwner();
     const calls = fakeBackend({
+      "GET /workspaces/ws_1/plan-features": () => PLAN_WITH_API,
       "GET /workspaces/ws_1/api-keys": () => ({ apiKeys: [], scopes: [] }),
       "GET /workspaces/ws_1/webhooks": () => ({ endpoints: [], events: EVENTS, wildcard: "*" }),
       "POST /workspaces/ws_1/webhooks": () => ({ endpoint: ENDPOINT, signingSecret: "whsec_the_secret_Ab12" }),
@@ -134,6 +141,7 @@ describe("DevelopersSection", () => {
   it("sends a test event and says how the receiver answered", async () => {
     asOwner();
     fakeBackend({
+      "GET /workspaces/ws_1/plan-features": () => PLAN_WITH_API,
       "GET /workspaces/ws_1/api-keys": () => ({ apiKeys: [], scopes: [] }),
       "GET /workspaces/ws_1/webhooks": () => ({ endpoints: [ENDPOINT], events: EVENTS, wildcard: "*" }),
       "POST /workspaces/ws_1/webhooks/wh_1/test": () => ({
@@ -146,5 +154,40 @@ describe("DevelopersSection", () => {
     expect(screen.getByText("whsec_…Ab12")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Send test" }));
     expect(await screen.findByText("Test not delivered: Receiver answered HTTP 500")).toBeInTheDocument();
+  });
+
+  it("without api_access on the plan: the plan notice instead of the button, the keys still listed and revocable", async () => {
+    asOwner();
+    const calls = fakeBackend({
+      "GET /workspaces/ws_1/plan-features": () => PLAN_WITHOUT_API,
+      "GET /workspaces/ws_1/api-keys": () => ({ apiKeys: [KEY], scopes: ["orders:read", "orders:write"] }),
+      "GET /workspaces/ws_1/webhooks": () => ({ endpoints: [], events: EVENTS, wildcard: "*" }),
+      "DELETE /workspaces/ws_1/api-keys/key_1": () => ({ apiKey: { ...KEY, revokedAt: "2026-09-29T11:00:00.000Z" } }),
+    });
+    const { user } = renderWithProviders(<DevelopersSection />);
+
+    expect(await screen.findByText("Your plan doesn't include API access. Upgrade your plan to use it.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "See the plans" }).getAttribute("href")).toBe("/subscription");
+    expect(screen.queryByRole("button", { name: "New API key" })).not.toBeInTheDocument();
+    // Webhooks are not the plan's business.
+    expect(screen.getByRole("button", { name: "Add endpoint" })).toBeInTheDocument();
+
+    expect(await screen.findByText("Sharks fulfilment")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Revoke" }));
+    await user.click(within(screen.getByRole("dialog", { name: "Revoke this key?" })).getByRole("button", { name: "Revoke" }));
+    await waitFor(() => expect(calls.some((c) => c.method === "DELETE")).toBe(true));
+  });
+
+  it("with the gate off, a missing api_access locks nothing", async () => {
+    asOwner();
+    fakeBackend({
+      "GET /workspaces/ws_1/plan-features": () => ({ planFeatures: { features: [], enforced: false } }),
+      "GET /workspaces/ws_1/api-keys": () => ({ apiKeys: [], scopes: [] }),
+      "GET /workspaces/ws_1/webhooks": () => ({ endpoints: [], events: EVENTS, wildcard: "*" }),
+    });
+    renderWithProviders(<DevelopersSection />);
+    expect(await screen.findByText("No API keys yet.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "New API key" })).toBeInTheDocument();
+    expect(screen.queryByText(/Your plan doesn't include/)).not.toBeInTheDocument();
   });
 });

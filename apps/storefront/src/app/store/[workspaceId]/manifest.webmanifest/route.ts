@@ -1,5 +1,7 @@
 import { storefrontStoreApp } from "@store-builder/api-client";
+import { brandingRemoved } from "@/components/PoweredByZimos";
 import { getStoreMeta } from "@/lib/storeMeta";
+import { httpUrlOrNull } from "@/lib/storeIcons";
 
 export const revalidate = 300;
 
@@ -21,15 +23,20 @@ export async function GET(_request: Request, { params }: { params: Promise<{ wor
   const primary = (store.themeSettings as Record<string, unknown> | null | undefined)?.primaryColor;
   const themeColor = app.themeColor ?? (typeof primary === "string" && HEX.test(primary) ? primary : "#111827");
   const arabic = ((store as { defaultLocale?: string }).defaultLocale ?? "ar").toLowerCase().startsWith("ar");
-  const icons = app.iconUrl
+  // The app's own icon; else the ZIMOS icon — unless the store hides the
+  // branding (`removeBranding`), when its logo stands in, or nothing does.
+  const ownIcon = app.iconUrl ?? (brandingRemoved(store) ? httpUrlOrNull(store.logoUrl) : null);
+  const icons = ownIcon
     ? [
-        { src: app.iconUrl, sizes: "192x192", purpose: "any" },
-        { src: app.iconUrl, sizes: "512x512", purpose: "any" },
+        { src: ownIcon, sizes: "192x192", purpose: "any" },
+        { src: ownIcon, sizes: "512x512", purpose: "any" },
       ]
-    : [
-        { src: "/brand/zimos-icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
-        { src: "/brand/zimos-icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
-      ];
+    : brandingRemoved(store)
+      ? []
+      : [
+          { src: "/brand/zimos-icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+          { src: "/brand/zimos-icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+        ];
 
   const manifest = {
     id: "./",

@@ -11,13 +11,13 @@ import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
 import { SelectField, TextAreaField } from "@/components/forms";
 import { Panel } from "@/components/Panel";
-import { Status } from "@/components/StatusBadge";
+import { Status, StatusBadge } from "@/components/StatusBadge";
 import { useToast } from "@/components/Toast";
 import { useAsync } from "@/lib/useAsync";
 import { getErrorMessage } from "@/lib/errors";
 import * as adminApi from "@/lib/adminApi";
 import { formatDateTime, formatRelative } from "@/lib/format";
-import { PRIORITY_LABEL, STATUS_LABEL } from "@/lib/tickets";
+import { PRIORITY_LABEL, STATUS_LABEL, priorityBadge } from "@/lib/tickets";
 
 type ReplyStatus = Exclude<SupportTicketStatus, "closed">;
 
@@ -32,6 +32,7 @@ export function TicketDetailPage() {
   const [saving, setSaving] = useState(false);
 
   const ticket = data?.ticket;
+  const raised = ticket ? priorityBadge(ticket.priority) : null;
 
   async function send(e: FormEvent) {
     e.preventDefault();
@@ -74,7 +75,14 @@ export function TicketDetailPage() {
     <div>
       <PageHeader
         title={ticket?.subject ?? "Ticket"}
-        titleBadge={ticket ? <Status value={ticket.status} label={STATUS_LABEL[ticket.status]} /> : undefined}
+        titleBadge={
+          ticket ? (
+            <>
+              <Status value={ticket.status} label={STATUS_LABEL[ticket.status]} />
+              {raised && <StatusBadge tone={raised.tone}>{raised.label}</StatusBadge>}
+            </>
+          ) : undefined
+        }
         description={
           ticket
             ? `${ticket.workspaceName ?? "Deleted workspace"} · ${ticket.category} · opened ${formatRelative(ticket.createdAt)} by ${ticket.createdBy ?? "a deleted user"}`
