@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { notFound } from "next/navigation";
 import "../globals.css";
+import "../landing.css";
 import { fontVariables } from "../fonts";
 import { directionOf, isLocale, locales } from "@/i18n/config";
 import { getDictionary } from "@/i18n/dictionaries";

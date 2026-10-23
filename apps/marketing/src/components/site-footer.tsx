@@ -5,17 +5,18 @@ import type { Dictionary } from "@/i18n/dictionary";
 import { getPlatformSettings } from "@/lib/platform-settings";
 import { companyDetails } from "@/lib/policies";
 import { LocaleSwitcher } from "./locale-switcher";
-import { container } from "./ui";
+import { ThemeToggle } from "./theme-toggle";
 import { ZimosLogo } from "./zimos-logo";
 
 /**
- * Logo, tagline, ZIMOS's social accounts (packages/ui/src/social-links), the
- * link columns — pricing, contact and the refund, terms and privacy pages
- * among them — the language switch, and the legal entity
- * (name and commercial registration from src/content/policies.json, tax
- * registration number from src/lib/policies.ts). Every
- * link is prefixed with the active locale; `#section` links go to the home
- * page's sections. The © year is computed at render.
+ * Two slim rows. Logo and tagline, then the links — pricing, contact and the
+ * refund, terms and privacy pages among them; below, the © line, the legal
+ * entity (name and commercial registration from src/content/policies.json,
+ * tax registration number from src/lib/policies.ts), ZIMOS's social accounts
+ * (packages/ui/src/social-links), the language switch and the light/dark
+ * switch (on a computer the header has neither). Every link is
+ * prefixed with the active locale; `#section` links go to the home page's
+ * sections. The © year is computed at render.
  *
  * With PLATFORM_SETTINGS_ENABLED on, the tagline, the social accounts, the
  * name in the © line, its words and the legal entity come from the console
@@ -39,48 +40,37 @@ export async function SiteFooter({
   const name = settings?.company?.platformName ?? brand.name;
 
   return (
-    <footer className="border-t border-line bg-paper-raised">
-      <div className={`${container} py-14 sm:py-16`}>
-        <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
-          <div className="max-w-xs">
-            <ZimosLogo height={32} />
-            <p className="mt-6 text-sm leading-relaxed text-ink-soft">{tagline}</p>
-            <SocialLinks locale={locale} links={socialLinksOf(settings)} className="mt-6" />
-            <div className="mt-6 flex items-center gap-3">
-              <span className="text-sm text-ink-soft">{copy.languageLabel}</span>
-              <LocaleSwitcher />
-            </div>
+    <footer className="lz-foot">
+      <div className="lz-in">
+        <div className="lz-foot__row">
+          <div className="lz-foot__brand">
+            <ZimosLogo height={26} />
+            <span>{tagline}</span>
           </div>
-
-          <nav aria-label={copy.navLabel} className="grid grid-cols-2 gap-8 sm:grid-cols-3">
-            {copy.columns.map((column) => (
-              <div key={column.title}>
-                <h2 className="text-sm font-semibold text-ink">{column.title}</h2>
-                <ul className="mt-4 space-y-3">
-                  {column.links.map((link) => (
-                    <li key={link.href}>
-                      <a
-                        href={`/${locale}${link.href}`}
-                        className="inline-flex min-h-11 items-center text-sm text-ink-soft transition-colors hover:text-primary sm:min-h-0"
-                      >
-                        {link.label}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+          <span className="lz-foot__spacer" />
+          <nav aria-label={copy.navLabel}>
+            <ul>
+              {copy.links.map((link) => (
+                <li key={link.href}>
+                  <a href={`/${locale}${link.href}`}>{link.label}</a>
+                </li>
+              ))}
+            </ul>
           </nav>
         </div>
 
-        <div className="mt-12 flex flex-col gap-1 border-t border-line pt-6 text-sm text-ink-soft sm:flex-row sm:flex-wrap sm:justify-between">
-          <p>
+        <div className="lz-foot__row">
+          <p className="m-0">
             © {year} {name} · {rights}
           </p>
-          <p>
+          <p className="m-0">
             {company.legalName} · {copy.registration}: <span dir="ltr">{company.registration}</span> ·{" "}
             {copy.taxRegistration}: <span dir="ltr">{company.taxRegistration}</span>
           </p>
+          <span className="lz-foot__spacer" />
+          <SocialLinks locale={locale} links={socialLinksOf(settings)} />
+          <LocaleSwitcher />
+          <ThemeToggle />
         </div>
       </div>
     </footer>

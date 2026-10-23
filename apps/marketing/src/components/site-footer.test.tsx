@@ -9,8 +9,10 @@ import { SiteFooter } from "./site-footer";
  * when it doesn't.
  */
 
-// The language switch needs Next's router; it plays no part here.
+// The language switch needs Next's router and the light/dark switch the i18n
+// provider; neither plays a part here.
 vi.mock("./locale-switcher", () => ({ LocaleSwitcher: () => null }));
+vi.mock("./theme-toggle", () => ({ ThemeToggle: () => null }));
 
 const dict = getDictionary("en");
 const renderFooter = async () => render(await SiteFooter({ copy: dict.footer, brand: dict.brand, locale: "en" }));
