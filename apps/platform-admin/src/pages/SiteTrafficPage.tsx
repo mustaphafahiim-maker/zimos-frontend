@@ -7,12 +7,19 @@ import { BarChart, ChartAxis, HBarList } from "@/components/charts";
 import { Panel } from "@/components/Panel";
 import { fmt, useLocale, useT } from "@/i18n/LocaleContext";
 import { useAsync } from "@/lib/useAsync";
+import { SITE_TRAFFIC_DETAILS_ENABLED } from "@/lib/features";
 import * as siteTrafficApi from "@/lib/siteTrafficApi";
 import { SITE_TRAFFIC_RANGES, type SiteTrafficRange } from "@/lib/siteTrafficApi";
 import { SITE_TRAFFIC_STRINGS, formatDuration } from "@/lib/siteTrafficStrings";
 import { formatChartLabel, formatNumber } from "@/lib/format";
+import { SiteTrafficDetails } from "@/pages/SiteTrafficDetails";
 
+/** The detailed tabs with VITE_SITE_TRAFFIC_DETAILS_ENABLED; otherwise the summary, as before. */
 export function SiteTrafficPage() {
+  return SITE_TRAFFIC_DETAILS_ENABLED ? <SiteTrafficDetails /> : <SiteTrafficSummary />;
+}
+
+function SiteTrafficSummary() {
   const t = useT(SITE_TRAFFIC_STRINGS);
   const { locale } = useLocale();
   const [range, setRange] = useState<SiteTrafficRange>("7d");

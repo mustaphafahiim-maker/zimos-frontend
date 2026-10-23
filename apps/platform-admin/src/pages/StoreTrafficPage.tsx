@@ -327,7 +327,7 @@ function FunnelList({ t, steps }: { t: Strings; steps: api.FunnelStep[] }) {
   );
 }
 
-function ClickableList({ rows, onPick }: { rows: Array<{ key: string; label: string; value: number; extra?: string }>; onPick: (key: string) => void }) {
+export function ClickableList({ rows, onPick }: { rows: Array<{ key: string; label: string; value: number; extra?: string }>; onPick: (key: string) => void }) {
   if (rows.length === 0) return <p className="text-sm text-ink-soft">—</p>;
   const top = Math.max(1, ...rows.map((r) => r.value));
   return (
@@ -352,7 +352,7 @@ function ClickableList({ rows, onPick }: { rows: Array<{ key: string; label: str
   );
 }
 
-function SimpleTable({ heads, rows }: { heads: string[]; rows: ReactNode[][] }) {
+export function SimpleTable({ heads, rows }: { heads: string[]; rows: ReactNode[][] }) {
   if (rows.length === 0) return <p className="px-4 pb-4 text-sm text-ink-soft">—</p>;
   return (
     <Table>
