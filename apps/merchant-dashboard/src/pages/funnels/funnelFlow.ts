@@ -25,7 +25,8 @@ export const FLOW_CARD_W = 224;
 // Room for the page thumbnail and the step's numbers (FlowMapTools).
 export const FLOW_CARD_H = 172;
 const GAP_X = 340;
-const GAP_Y = 176;
+// A card's height and room under it for the "+" that sits on its corner and an arrow's label between rows.
+const GAP_Y = 236;
 const ORIGIN_X = 40;
 const ORIGIN_Y = 64;
 
@@ -47,10 +48,15 @@ function branchRank(e: EdgeLike): number {
 }
 
 /**
- * Column = distance from the entry, row = branch. The first path out of a
- * step stays on its row; every further path (a "no" branch) drops to the next
- * free row in the next column. Steps the entry can't reach go in a row of
- * their own below, so they are easy to spot.
+ * Column = the step's place on the longest way to it from the entry, so a step
+ * always stands after every step that leads to it: a checkout before the
+ * thank-you page it ends on, even when an order on the sales page can skip
+ * straight there. A path back to an earlier step (a loop) moves nothing.
+ *
+ * Row = branch. The first path out of a step keeps its row; every further one
+ * (a "no" answer, a second way on) drops below it, so a path that skips a
+ * column runs along an empty row instead of behind a card. Steps the entry
+ * can't reach go in a row of their own below, so they are easy to spot.
  */
 export function layoutFlow(stepKeys: string[], edges: EdgeLike[]): Map<string, { x: number; y: number }> {
   const known = new Set(stepKeys);
@@ -63,6 +69,33 @@ export function layoutFlow(stepKeys: string[], edges: EdgeLike[]): Map<string, {
   }
   for (const list of out.values()) list.sort((a, b) => branchRank(a) - branchRank(b) || b.priority - a.priority);
 
+  // The paths that go forward, in the order they are tried: a walk from the entries that leaves
+  // out a path back to a step it is still walking (a loop). `finished` ends up in reverse flow order.
+  const entries = entryKeysOf(stepKeys, edges);
+  const forward = new Map<string, string[]>();
+  const walking = new Set<string>();
+  const finished: string[] = [];
+  const walk = (key: string) => {
+    walking.add(key);
+    const next: string[] = [];
+    for (const e of out.get(key) ?? []) {
+      const to = e.toStepKey;
+      if (walking.has(to) || next.includes(to)) continue;
+      next.push(to);
+      if (!forward.has(to)) walk(to);
+    }
+    forward.set(key, next);
+    walking.delete(key);
+    finished.push(key);
+  };
+  for (const entry of entries) if (!forward.has(entry)) walk(entry);
+
+  const column = new Map<string, number>(entries.map((key) => [key, 0]));
+  for (const key of [...finished].reverse()) {
+    const at = column.get(key) ?? 0;
+    for (const to of forward.get(key) ?? []) column.set(to, Math.max(column.get(to) ?? 0, at + 1));
+  }
+
   const cell = new Map<string, { col: number; row: number }>();
   const used = new Map<number, Set<number>>();
   const take = (col: number, row: number) => {
@@ -74,22 +107,22 @@ export function layoutFlow(stepKeys: string[], edges: EdgeLike[]): Map<string, {
     return r;
   };
 
-  const entries = entryKeysOf(stepKeys, edges);
   let maxRow = -1;
   for (const entry of entries) {
-    const row = take(0, maxRow + 1);
-    cell.set(entry, { col: 0, row });
+    cell.set(entry, { col: 0, row: take(0, maxRow + 1) });
     const queue = [entry];
     while (queue.length > 0) {
       const cur = queue.shift() as string;
       const at = cell.get(cur) as { col: number; row: number };
       maxRow = Math.max(maxRow, at.row);
-      for (const e of out.get(cur) ?? []) {
-        if (cell.has(e.toStepKey)) continue;
-        const pos = { col: at.col + 1, row: take(at.col + 1, at.row) };
-        cell.set(e.toStepKey, pos);
+      let branch = 0;
+      for (const to of forward.get(cur) ?? []) {
+        if (cell.has(to)) continue;
+        const col = column.get(to) ?? at.col + 1;
+        const pos = { col, row: take(col, at.row + branch++) };
+        cell.set(to, pos);
         maxRow = Math.max(maxRow, pos.row);
-        queue.push(e.toStepKey);
+        queue.push(to);
       }
     }
   }

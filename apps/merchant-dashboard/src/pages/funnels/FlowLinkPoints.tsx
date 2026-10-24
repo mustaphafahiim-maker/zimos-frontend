@@ -120,9 +120,9 @@ const DOT_TONE: Record<UiEdgeCondition, { dot: string; chip: string }> = {
 
 /**
  * A card's dots, on its end edge. Drag one to a card, or press it to pick a
- * step. An offer's two answers are always named beside their dots; the other
- * ways out are named while they lead nowhere yet, or when `showLabels` is on
- * (the card is selected).
+ * step. An offer's two answers are always named beside their dots; the order
+ * and "continue" are named while they lead nowhere yet. Every dot is named
+ * when `showLabels` is on (the card is selected).
  */
 export function LinkPoints({
   step,
@@ -193,7 +193,9 @@ export function LinkPoints({
         const label = fmt(t.link, { label: point.label });
         const tone = DOT_TONE[point.condition];
         const isAnswer = point.condition === "accepted_offer" || point.condition === "declined_offer";
-        const named = isAnswer || showLabels || !target;
+        // A button with no path of its own is not stuck: it follows the step's own way on. So it is
+        // named with the card selected only, and a page with many such buttons doesn't crowd the map.
+        const named = isAnswer || showLabels || (!target && point.condition !== "clicked_through");
         return (
           <div
             key={point.id}

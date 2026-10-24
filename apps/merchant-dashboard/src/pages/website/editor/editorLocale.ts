@@ -950,7 +950,7 @@ const UI_AR: EditorUi = {
   noElements: "لا يحتوي هذا القسم على عناصر للتعديل.",
   elementCount: (n) => (n === 1 ? "عنصر واحد" : n === 2 ? "عنصرين" : `${n} عناصر`),
   emptySection: "قسم فارغ",
-  andMore: (label, n) => `${label} + ${n} كمان`,
+  andMore: (label, n) => (n === 1 ? `${label} وعنصر آخر` : n === 2 ? `${label} وعنصران آخران` : n <= 10 ? `${label} و${n} عناصر أخرى` : `${label} و${n} عنصرًا آخر`),
   listItem: "عنصر",
   addItem: (item) => `إضافة ${item}`,
   itemAria: (item, i) => `${item} ${i}`,

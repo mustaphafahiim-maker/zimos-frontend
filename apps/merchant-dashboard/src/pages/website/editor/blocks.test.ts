@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { PageElement, PageSection } from "@store-builder/api-client";
 import {
   BLOCK_GROUPS,
   BLOCK_PRESETS,
@@ -353,6 +354,17 @@ describe("createSection", () => {
     // The same elements in a single column are still recognisable by shape.
     const flat: BlockPreset = { ...split, rows: undefined };
     expect(sectionLabel(createSection(flat))).toBe(split.label);
+  });
+
+  it("names a section that is no preset by its own heading, and one without a heading by what it holds", () => {
+    const el = (id: string, type: string, props: Record<string, unknown>) => ({ id, type, props }) as PageElement;
+    const section = (elements: PageElement[]) => ({ id: "s", type: "section", rows: [{ id: "r", type: "row", columns: [{ id: "c", type: "column", span: 12, elements }] }] }) as unknown as PageSection;
+    const why = section([el("a", "icon", {}), el("b", "heading", { text: "  Why   choose us " }), el("c", "text", { text: "…" }), el("d", "icon", {})]);
+    expect(sectionLabel(why)).toBe("Why choose us");
+    expect(sectionLabel(why, "ar")).toBe("Why choose us");
+    const plain = section([el("a", "icon", {}), el("b", "text", { text: "x" }), el("c", "icon", {})]);
+    expect(sectionLabel(plain, "ar")).not.toContain("كمان");
+    expect(sectionLabel(plain, "ar")).toMatch(/وعنصران آخران$/);
   });
 
   it("tells presets of the same shape apart by the section settings they carry", () => {

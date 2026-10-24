@@ -12,6 +12,8 @@ export const PANE_STRINGS = {
     // The steps list.
     steps: "Steps",
     addStep: "Add step",
+    // On the button beside the list's title, where its full name would push the title out.
+    addStepShort: "Add step",
     addStepTitle: "Add which step?",
     addStepHint: "It is added after the selected step, or at the end of the funnel.",
     collapse: "Hide the steps list",
@@ -115,6 +117,7 @@ export const PANE_STRINGS = {
   ar: {
     steps: "الخطوات",
     addStep: "إضافة خطوة",
+    addStepShort: "خطوة",
     addStepTitle: "أي خطوة تريد إضافتها؟",
     addStepHint: "تُضاف بعد الخطوة المحددة، أو في آخر مسار البيع.",
     collapse: "إخفاء قائمة الخطوات",

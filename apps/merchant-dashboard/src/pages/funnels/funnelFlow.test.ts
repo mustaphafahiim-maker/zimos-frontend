@@ -18,6 +18,7 @@ vi.mock("@store-builder/api-client", async (importOriginal) => ({
 
 import { STARTER_TEMPLATE_IDS, saveFunnelDiff, starterPlan, type StarterTemplateId, type UiFunnel, type UiStep } from "./funnelAdapter";
 import {
+  FLOW_CARD_H,
   addStepAfter,
   applyStarterPlan,
   collectFunnelProblems,
@@ -359,6 +360,39 @@ describe("editing the flow", () => {
     expect(pos.get("stray")!.y).toBeGreaterThan(pos.get("b")!.y);
     const tidy = tidyFunnel(applyStarterPlan(uiFunnel(), starterPlan("cod-upsell", "en"), []));
     expect(tidy.steps.map((s) => s.key)).toEqual(["product", "checkout", "upsell", "thank-you"]);
+  });
+
+  it("tidy layout puts a step after every step that leads to it, and a skipping path on a row of its own", () => {
+    // The full sales page: an order there skips to thank-you; its buttons lead to the checkout, which ends there too.
+    const f = tidyFunnel(applyStarterPlan(uiFunnel(), starterPlan("single-product", "en"), []));
+    const at = new Map(f.steps.map((s) => [s.key, s]));
+    expect(f.steps.map((s) => s.key)).toEqual(["sales", "checkout", "thank-you"]);
+    expect(at.get("checkout")!.x).toBeGreaterThan(at.get("sales")!.x);
+    expect(at.get("thank-you")!.x).toBeGreaterThan(at.get("checkout")!.x);
+    // The skip runs along the top row; the checkout drops below it, clear of the card's "+" and the arrows' labels.
+    expect(at.get("thank-you")!.y).toBe(at.get("sales")!.y);
+    expect(at.get("checkout")!.y - at.get("sales")!.y).toBeGreaterThanOrEqual(FLOW_CARD_H + 56);
+  });
+
+  it("tidy layout keeps a declined offer's step below the yes path", () => {
+    const f = tidyFunnel(applyStarterPlan(uiFunnel(), starterPlan("upsell-downsell", "en"), []));
+    const at = new Map(f.steps.map((s) => [s.key, s]));
+    expect(f.steps.map((s) => s.key)).toEqual(["landing", "checkout", "upsell", "downsell", "thank-you"]);
+    expect(at.get("downsell")!.y).toBeGreaterThan(at.get("upsell")!.y);
+    expect(at.get("thank-you")!.y).toBe(at.get("upsell")!.y);
+  });
+
+  it("tidy layout is not thrown by a path back to an earlier step", () => {
+    const pos = layoutFlow(
+      ["a", "b", "c"],
+      [
+        { fromStepKey: "a", toStepKey: "b", condition: "always", priority: 0 },
+        { fromStepKey: "b", toStepKey: "c", condition: "always", priority: 0 },
+        { fromStepKey: "c", toStepKey: "b", condition: "declined_offer", priority: 0 },
+      ]
+    );
+    expect([pos.get("a")!.x, pos.get("b")!.x, pos.get("c")!.x]).toEqual([...[pos.get("a")!.x, pos.get("b")!.x, pos.get("c")!.x]].sort((x, y) => x - y));
+    expect(new Set([pos.get("a")!.x, pos.get("b")!.x, pos.get("c")!.x]).size).toBe(3);
   });
 });
 

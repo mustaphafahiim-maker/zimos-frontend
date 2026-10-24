@@ -300,6 +300,15 @@ export function FlowCanvas(props: FlowCanvasProps) {
       const x2 = to.x;
       const y2 = to.y + CARD_H / 2;
       const bend = Math.max(48, Math.abs(x2 - x1) / 2);
+      // A path that would run behind another card goes round it, underneath. With both handles at one
+      // height `cy`, the curve's lowest point is (y1 + y2) / 8 + ¾ cy: `cy` is picked to put it at `under`.
+      const lo = Math.min(y1, y2) - 12;
+      const hi = Math.max(y1, y2) + 12;
+      const blocking =
+        x2 > x1 ? [...byKey.values()].filter((s) => s !== from && s !== to && s.x < x2 && s.x + CARD_W > x1 && s.y < hi && s.y + CARD_H > lo) : [];
+      const under = blocking.length > 0 ? Math.max(...blocking.map((s) => s.y + CARD_H)) + 48 : null;
+      const cy1 = under === null ? y1 : (under - (y1 + y2) / 8) / 0.75;
+      const cy2 = under === null ? y2 : cy1;
 
       // What the numbers can honestly say. The API counts visitors per step, not per arrow: the share
       // that reached the target is exact only when this arrow is the target's one way in. An offer's
@@ -315,11 +324,11 @@ export function FlowCanvas(props: FlowCanvasProps) {
           edge: e,
           from,
           to,
-          d: `M ${x1} ${y1} C ${x1 + bend} ${y1 + off}, ${x2 - bend} ${y2 + off}, ${x2} ${y2}`,
+          d: `M ${x1} ${y1} C ${x1 + bend} ${cy1 + off}, ${x2 - bend} ${cy2 + off}, ${x2} ${y2}`,
           pointLabel: at >= 0 && e.condition === "clicked_through" ? points[at].label : null,
           // Midpoint of the cubic at t = 0.5.
           mx: (x1 + x2) / 2,
-          my: (y1 + y2) / 2 + 0.75 * off,
+          my: (y1 + 3 * cy1 + 3 * cy2 + y2) / 8 + 0.75 * off,
           share,
           left,
         },

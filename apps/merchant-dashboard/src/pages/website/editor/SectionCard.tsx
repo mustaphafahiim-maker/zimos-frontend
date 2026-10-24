@@ -5,7 +5,7 @@ import { IconDelete, IconDragHandle, IconEyeOff, type IconComponent } from "@/co
 import { cn } from "@store-builder/ui";
 import type { PageElement, PageSection } from "@store-builder/api-client";
 import { ContextMenu, type ContextMenuItem } from "@/components/ContextMenu";
-import { ELEMENT_SPECS, sectionElements, sectionIcon, sectionLabel } from "./blocks";
+import { ELEMENT_SPECS, sectionElements, sectionHeadingText, sectionIcon, sectionLabel } from "./blocks";
 import { editorUi, elementName, useEditorLocale, type EditorLocale } from "./editorLocale";
 import { RowMenu } from "./library/RowMenu";
 import { leftUi } from "./library/strings";
@@ -108,8 +108,15 @@ export function SectionCard({
 
   const elements = sectionElements(section);
   const icon = sectionIcon(section);
-  // Under the row's name: what a one-element section says (its heading, how many slides…), else how many elements it holds.
-  const detail = elements.length === 1 ? elementSummary(elements[0], locale) : elements.length > 1 ? t.elements(elements.length) : "";
+  // Under the row's name: what a one-element section says (its heading, how many slides…); a section of
+  // several, its heading when the name is not already that, else how many elements it holds.
+  const heading = sectionHeadingText(section, 90);
+  const detail =
+    elements.length === 1
+      ? elementSummary(elements[0], locale)
+      : elements.length > 1
+        ? heading && !heading.startsWith(label.replace(/…$/, "")) ? heading : t.elements(elements.length)
+        : "";
   const touch = variant === "sheet";
   /** The row is drawn on the brand fill: what sits on it takes the fill's own text colour. */
   const onBrand = selected && !showSummary;
@@ -186,7 +193,7 @@ export function SectionCard({
                 <NodeIcon icon={icon} className="size-4" />
               </span>
               <span className={cn("min-w-0 flex-1", hidden && "opacity-60")}>
-                <span className="block truncate text-sm font-medium leading-5">{label}</span>
+                <span className="block truncate text-sm font-medium leading-5" dir="auto">{label}</span>
                 {detail && (
                   <span className={cn("block truncate text-xs leading-4", selected ? "opacity-80" : "text-ink-soft")} dir="auto">
                     {detail}
@@ -282,7 +289,7 @@ export function SectionCard({
           className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 self-stretch rounded-[0.5rem] px-1 text-start outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary"
         >
           <NodeIcon icon={icon} className="size-4 shrink-0 text-primary" />
-          <span className="truncate text-sm font-medium text-ink">{label}</span>
+          <span className="truncate text-sm font-medium text-ink" dir="auto">{label}</span>
         </button>
         {menuItems ? (
           <RowMenu items={menuItems} label={t.rowMenu(label)} />

@@ -237,10 +237,11 @@ export function AddStepMenu({ onAdd }: AddStepMenuProps) {
       trigger={
         <button
           type="button"
+          aria-label={t.addStep}
           className="zimos-funnel-add inline-flex min-h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-primary px-3 text-sm font-medium text-primary-foreground transition-[scale] duration-[var(--dur-fade)] ease-[var(--ease-out)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100 pointer-coarse:min-h-11"
         >
           <IconPlus className="size-4" aria-hidden />
-          {t.addStep}
+          {t.addStepShort}
         </button>
       }
     />

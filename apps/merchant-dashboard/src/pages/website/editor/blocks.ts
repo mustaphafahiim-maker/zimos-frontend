@@ -3422,10 +3422,23 @@ function matchPreset(section: PageSection): BlockPreset | undefined {
   );
 }
 
+/** The words of a section's first heading, on one line and cut to a name's length; "" when it has none. */
+export function sectionHeadingText(section: PageSection, max = 48): string {
+  for (const el of sectionElements(section)) {
+    if (el.type !== "heading") continue;
+    const text = (el.props as { text?: unknown } | undefined)?.text;
+    const clean = typeof text === "string" ? text.replace(/\s+/g, " ").trim() : "";
+    if (clean) return clean.length > max ? `${clean.slice(0, max - 1)}…` : clean;
+  }
+  return "";
+}
+
 /**
  * A display name for a section. The tree has no section type, so this reads
  * the elements: a preset match wins (that's how a template's hero gets called
- * "Hero"), otherwise fall back to the first element's own label.
+ * "Hero"). A section of several elements that is no preset is called by its
+ * own heading («Why choose us»), and only a section without one by its first
+ * element and how many more it holds.
  */
 export function sectionLabel(section: PageSection, locale: EditorLocale = "en"): string {
   const types = sectionElements(section).map((el) => el.type);
@@ -3439,7 +3452,8 @@ export function sectionLabel(section: PageSection, locale: EditorLocale = "en"):
     return match.key.startsWith("xs-") ? label.replace(/\s+(?:[0-9]{2}|[٠-٩]{2})$/u, "") : label;
   }
   const first = elementName(types[0], ELEMENT_SPECS[types[0]].label, locale);
-  return types.length === 1 ? first : ui.andMore(first, types.length - 1);
+  if (types.length === 1) return first;
+  return sectionHeadingText(section) || ui.andMore(first, types.length - 1);
 }
 
 export function sectionIcon(section: PageSection): IconComponent {

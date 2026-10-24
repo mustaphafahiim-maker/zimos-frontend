@@ -19,6 +19,7 @@ import { MediaPicker } from "@/components/MediaPicker";
 import { Sheet } from "@/components/Sheet";
 import { StorefrontPreview } from "@/components/StorefrontPreview";
 import { useToast } from "@/components/Toast";
+import { useWorkspace } from "@/context/WorkspaceContext";
 import { fmt, useLocale, useT } from "@/i18n/LocaleContext";
 import { BlockLibrarySheet } from "../website/editor/BlockLibrary";
 import { PageProductField } from "../website/editor/DataBinding";
@@ -27,7 +28,9 @@ import { LayerList } from "../website/editor/LayerList";
 import { PageSettingsDialog } from "../website/editor/PageSettingsDialog";
 import { SectionInspector, type InspectorTab } from "../website/editor/SectionInspector";
 import { sectionElements, sectionLabel, soleElementId, type BlockPreset } from "../website/editor/blocks";
-import { inlineTextIds, sectionHidden } from "../website/editor/canvasTools";
+import { deepTextOf, inlineTextIds, sectionHidden } from "../website/editor/canvasTools";
+import type { FocusItem } from "../website/editor/inspector/env";
+import { XS_ONLY, isXsType } from "../website/editor/xsBlocks";
 import { EditorLocaleContext, editorUi, useEditorLocale } from "../website/editor/editorLocale";
 import type { ColorMode } from "../website/editor/storeThemes";
 import { EditorStage } from "../website/editor/shell/EditorStage";
@@ -70,7 +73,11 @@ import { useStepHistory } from "./useStepHistory";
  * The library is the store editor's sheet (BlockLibrarySheet — every block a
  * website page may hold, plus the saved sections, this funnel's own included).
  * The edits are the store editor's (`useSectionEdits`), the keys too
- * (`useEditorShortcuts`), and undo / redo is `useStepHistory`.
+ * (`useEditorShortcuts`), and undo / redo is `useStepHistory`. A page that
+ * holds an imported template's band gets that editor's template tools as well:
+ * a slide or card pressed on the page opens its entry, a band's words are
+ * typed where they stand, its pictures are swapped by their place, and its
+ * entries have their own handles (`templateTools`).
  *
  * What differs is where the page lives and what is around it:
  *
@@ -203,6 +210,8 @@ function StepPageEditor({
   // --- selection: a section, and one element inside it ------------------------
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
+  /** The entry of an imported template's list pressed on the page (a slide, a card): its card opens in the inspector. */
+  const [focusItem, setFocusItem] = useState<FocusItem | null>(null);
   const [inspectorTab, setInspectorTab] = useState<InspectorTab>("content");
   /** Where "add a section here" pointed; the next block from the library lands there. */
   const [insertIndex, setInsertIndex] = useState<number | null>(null);
@@ -230,6 +239,7 @@ function StepPageEditor({
     setSeededKey(step.key);
     setSelectedSectionId(null);
     setSelectedElementId(null);
+    setFocusItem(null);
     setInsertIndex(null);
     setInspectorOpen(false);
     setSectionsOpen(false);
@@ -244,6 +254,19 @@ function StepPageEditor({
     selected && selectedElementId && sectionElements(selected).some((el) => el.id === selectedElementId) ? selectedElementId : null;
   const labels = useMemo(() => Object.fromEntries(sections.map((s) => [s.id, sectionLabel(s, locale)])), [sections, locale]);
   const inlineText = useMemo(() => inlineTextIds(sections), [sections]);
+  // The words of each band with many (an imported template's), which a double-click edits where they stand.
+  const deepText = useMemo(() => deepTextOf(sections), [sections]);
+  /**
+   * The imported templates' tools on the page, as in the store editor: a band's entries, its
+   * pictures by their place, their sizes and focus, and the editor's keys from the frame. On while
+   * the page holds a template's band (or the editor offers only those); a page of Zimos's own
+   * blocks is edited as it was.
+   */
+  const { currentWorkspace } = useWorkspace();
+  const xsLook = currentWorkspace?.themeSettings?.xsLook;
+  /** The store wears an imported template: its bands are in the library, as in the store editor. */
+  const templateBands = XS_ONLY || (typeof xsLook === "string" && xsLook !== "");
+  const templateTools = useMemo(() => templateBands || sections.some((s) => sectionElements(s).some((el) => isXsType(el.type))), [templateBands, sections]);
   const hasSettings = onSeoChange !== undefined;
 
   function revealInspector() {
@@ -261,10 +284,12 @@ function StepPageEditor({
     if (scroll) setScrollRequest((prev) => ({ sectionId, nonce: (prev?.nonce ?? 0) + 1 }));
   }
 
-  /** A click on an element of the selected section — in the preview, or in the section list. */
-  function selectElement(target: { sectionId: string; elementId: string }) {
+  /** A click on an element of the selected section — in the preview, or in the section list. `item`: the entry pressed ("slides.2"). */
+  function selectElement(target: { sectionId: string; elementId: string; item?: string }) {
     setSelectedSectionId(target.sectionId);
     setSelectedElementId(target.elementId);
+    const [list, at] = target.item ? target.item.split(".") : [];
+    setFocusItem((prev) => (list && at ? { elementId: target.elementId, list, index: Number(at), nonce: (prev?.nonce ?? 0) + 1 } : null));
     setSectionsOpen(false);
     revealInspector();
   }
@@ -272,6 +297,7 @@ function StepPageEditor({
   function clearSelection() {
     setSelectedSectionId(null);
     setSelectedElementId(null);
+    setFocusItem(null);
     setInspectorOpen(false);
   }
 
@@ -384,6 +410,14 @@ function StepPageEditor({
       setPendingDelete(selected);
       return true;
     },
+    ...(templateTools
+      ? {
+          copy: () => edits.copy(selectedSectionId, elementId),
+          // Pasting needs no selection: a copied section lands at the end of the page.
+          paste: () => edits.paste(selectedSectionId, elementId),
+          duplicate: () => edits.duplicateSelected(selectedSectionId, elementId),
+        }
+      : {}),
   });
 
   // --- «…» ------------------------------------------------------------------------
@@ -444,6 +478,7 @@ function StepPageEditor({
       onDuplicate={() => edits.duplicate(selected.id)}
       onClose={clearSelection}
       focusElementId={elementId}
+      focusItem={focusItem}
       tab={inspectorTab}
       onTabChange={setInspectorTab}
       onRequestImage={(apply) => requestImage({ kind: "apply", apply })}
@@ -598,9 +633,12 @@ function StepPageEditor({
               selectedElementId={elementId}
               onSelectElement={selectElement}
               onSectionAction={edits.act}
-              onPickImage={(target) =>
-                requestImage({ kind: "field", sectionId: target.sectionId, elementId: target.elementId, field: target.field })
-              }
+              onPickImage={(target) => {
+                // A band with many pictures names the one that was pressed by its address, not by a field.
+                const { src, nth, elementId: picked } = target;
+                if (src) requestImage({ kind: "apply", apply: (url) => edits.replacePicture(picked, src, nth ?? 0, url) });
+                else requestImage({ kind: "field", sectionId: target.sectionId, elementId: picked, field: target.field });
+              }}
               canvas={{
                 selectedId: selectedSectionId,
                 labels,
@@ -614,8 +652,28 @@ function StepPageEditor({
                   resizeHeight: ui.canvasResizeHeight,
                   resizeColumns: ui.canvasResizeColumns,
                   resizeImage: ui.canvasResizeImage,
+                  resizePicture: ui.canvasResizePicture,
+                  focalPoint: ui.canvasFocalPoint,
+                  moveItem: ui.canvasMoveItem,
+                  duplicateItem: ui.canvasDuplicateItem,
+                  deleteItem: ui.canvasDeleteItem,
+                  original: ui.canvasOriginal,
+                  everyPicture: ui.canvasEveryPicture,
                   auto: ui.canvasAuto,
                   editText: ui.canvasEditText,
+                },
+                templateTools,
+                deepText,
+                onCanvasKey: (key) => {
+                  // The same keys as on the editor itself, pressed while the page had the focus.
+                  // The frame hands them over only with the template's tools.
+                  if (!templateTools) return;
+                  if (key === "copy") edits.copy(selectedSectionId, elementId);
+                  else if (key === "paste") edits.paste(selectedSectionId, elementId);
+                  else if (key === "duplicate") edits.duplicateSelected(selectedSectionId, elementId);
+                  else if (key === "undo") history.undo();
+                  else if (key === "redo") history.redo();
+                  else if (key === "delete" && selected && !elementId) setPendingDelete(selected);
                 },
                 scrollRequest,
                 // In a narrow box a tap selects and the bottom bar offers «عدّل»; the store stays in view.
@@ -685,6 +743,7 @@ function StepPageEditor({
         onInsertSaved={insertSaved}
         funnelId={funnelId}
         insertIndex={insertIndex}
+        templateBands={templateBands}
       />
 
       <MediaPicker

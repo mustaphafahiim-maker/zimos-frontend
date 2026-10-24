@@ -207,6 +207,8 @@ export function EditInPlace({
         >
           <span className="sr-only">{label}: </span>
           <span
+            // Cut at the end of the value's own writing: an English name on an Arabic page loses its end, not its start.
+            dir="auto"
             className={cn(
               "-my-0.5 min-w-0 truncate py-0.5 underline decoration-transparent decoration-dotted underline-offset-[3px]",
               "transition-[text-decoration-color,opacity] duration-[var(--dur-fade)] ease-[var(--ease-out)] motion-reduce:transition-none",
